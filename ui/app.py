@@ -51,7 +51,7 @@ class ScrapRateApp(ctk.CTk):
         input_frame = ctk.CTkFrame(self)
         input_frame.pack(pady=20, padx=40, fill="both", expand=True)
         
-        # Label y Entry para Año
+        # Label y Dropdown para Año
         year_label = ctk.CTkLabel(
             input_frame,
             text="Año:",
@@ -59,16 +59,22 @@ class ScrapRateApp(ctk.CTk):
         )
         year_label.pack(pady=(20, 5))
         
-        self.year_entry = ctk.CTkEntry(
-            input_frame,
-            placeholder_text=f"Año (default: {self.current_year})",
-            width=200,
-            justify="center"
-        )
-        self.year_entry.insert(0, str(self.current_year))
-        self.year_entry.pack(pady=5)
+        # Dropdown para Año (2023 hasta año actual)
+        current_year = datetime.now().year
+        years_list = [str(year) for year in range(2023, current_year + 1)]
         
-        # Label y Entry para Semana
+        self.year_combobox = ctk.CTkComboBox(
+            input_frame,
+            values=years_list,
+            width=200,
+            justify="center",
+            command=self.on_year_change,
+            state="readonly"
+        )
+        self.year_combobox.set(str(self.current_year))
+        self.year_combobox.pack(pady=5)
+        
+        # Label y Dropdown para Semana
         week_label = ctk.CTkLabel(
             input_frame,
             text="Semana:",
@@ -76,14 +82,18 @@ class ScrapRateApp(ctk.CTk):
         )
         week_label.pack(pady=(15, 5))
         
-        self.week_entry = ctk.CTkEntry(
+        # Dropdown para Semana (se actualiza según el año)
+        self.week_combobox = ctk.CTkComboBox(
             input_frame,
-            placeholder_text=f"Semana (default: {self.current_week})",
+            values=[],
             width=200,
-            justify="center"
+            justify="center",
+            state="readonly"
         )
-        self.week_entry.insert(0, str(self.current_week))
-        self.week_entry.pack(pady=5)
+        self.week_combobox.pack(pady=5)
+        
+        # Actualizar semanas disponibles para el año actual
+        self.update_weeks_for_year(self.current_year)
         
         # Barra de progreso (inicialmente oculta)
         self.progress_bar = ctk.CTkProgressBar(
@@ -113,6 +123,38 @@ class ScrapRateApp(ctk.CTk):
             hover_color="#218838"
         )
         self.pdf_button.pack(pady=30)
+    
+    def on_year_change(self, selected_year):
+        """Actualiza las semanas disponibles cuando cambia el año"""
+        self.update_weeks_for_year(int(selected_year))
+    
+    def update_weeks_for_year(self, year):
+        """Actualiza el dropdown de semanas según el año seleccionado"""
+        current_date = datetime.now()
+        current_year = current_date.year
+        current_week = int(current_date.strftime('%U'))
+        
+        if year < current_year:
+            # Año pasado: mostrar todas las 52 semanas
+            max_week = 52
+        elif year == current_year:
+            # Año actual: solo semanas transcurridas
+            max_week = current_week
+        else:
+            # Año futuro: no debería llegar aquí, pero por si acaso
+            max_week = 0
+        
+        # Crear lista de semanas
+        weeks_list = [str(week) for week in range(0, max_week + 1)]
+        
+        # Actualizar el combobox
+        self.week_combobox.configure(values=weeks_list)
+        
+        # Seleccionar la última semana disponible
+        if weeks_list:
+            self.week_combobox.set(str(max_week))
+        else:
+            self.week_combobox.set("")
         
     def show_progress(self, message):
         """Muestra la barra de progreso y el mensaje de estado"""
@@ -138,9 +180,15 @@ class ScrapRateApp(ctk.CTk):
     def generate_pdf(self):
         """Genera el PDF directamente con todos los datos"""
         try:
-            # Obtener valores de los entries
-            year = int(self.year_entry.get())
-            week = int(self.week_entry.get())
+            # Obtener valores de los comboboxes
+            year = int(self.year_combobox.get())
+            week_str = self.week_combobox.get()
+            
+            if not week_str:
+                self.after(0, lambda: messagebox.showerror("Error", "Seleccione una semana válida"))
+                return
+                
+            week = int(week_str)
             
             # Validar semana
             if week < 0 or week > 53:

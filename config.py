@@ -7,18 +7,18 @@ Archivo de configuración para el análisis de Scrap Rate
 # ============================================
 # Formato: mes (1-12): target_rate
 TARGET_RATES = {
-    1: 0.60,   # Enero
-    2: 0.60,   # Febrero
-    3: 0.60,   # Marzo
-    4: 0.60,   # Abril
-    5: 0.60,   # Mayo
-    6: 0.60,   # Junio
-    7: 0.60,   # Julio
-    8: 0.60,   # Agosto
+    1: 0.50,   # Enero
+    2: 0.50,   # Febrero
+    3: 0.40,   # Marzo
+    4: 0.30,   # Abril
+    5: 0.50,   # Mayo
+    6: 0.50,   # Junio
+    7: 0.40,   # Julio
+    8: 0.50,   # Agosto
     9: 0.60,   # Septiembre
-    10: 0.60,  # Octubre
-    11: 0.60,  # Noviembre
-    12: 0.60   # Diciembre
+    10: 0.40,  # Octubre
+    11: 0.50,  # Noviembre
+    12: 0.30   # Diciembre
 }
 
 # ============================================

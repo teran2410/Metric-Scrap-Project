@@ -11,7 +11,6 @@ from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 from datetime import datetime
 import os
 
-
 def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'):
     """
     Genera un PDF con el reporte de Scrap Rate y principales contribuidores
@@ -56,7 +55,7 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
         'CustomTitle',
         parent=styles['Heading1'],
         fontSize=24,
-        textColor=colors.HexColor('#1f77b4'),
+        textColor=colors.black,
         spaceAfter=30,
         alignment=TA_CENTER,
         fontName='Helvetica-Bold'
@@ -81,14 +80,14 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
     elements.append(subtitle)
     elements.append(Spacer(1, 0.3*inch))
     
-    # ============================================
-    # PRIMERA TABLA: REPORTE SEMANAL
-    # ============================================
+    # ========================================================================================
+    #                         PRIMERA TABLA: REPORTE SEMANAL
+    # ========================================================================================
     # Preparar datos para la tabla
     data = []
     
     # Encabezados
-    headers = ['Day', 'D', 'W', 'M', 'Scrap', 'Hrs Prod.', 'Rate', 'Target Rate', '$ Venta (dls)']
+    headers = ['Day', 'D', 'W', 'M', 'Scrap', 'Hrs Prod.', 'Venta (dls)', 'Rate', 'Target Rate']
     data.append(headers)
     
     # Datos del DataFrame
@@ -98,9 +97,14 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
             value = row[col]
             
             # Formatear valores según el tipo
-            if col == 'Scrap' or col == 'Hrs Prod.':
+            if col == 'Scrap':
                 if isinstance(value, (int, float)):
-                    row_data.append(f"{value:,.2f}")
+                    row_data.append(f"${value:,.2f}")
+                else:
+                    row_data.append(str(value))
+            elif col == 'Hrs Prod.':
+                if isinstance(value, (int, float)):
+                    row_data.append(f"{value:.2f}")
                 else:
                     row_data.append(str(value))
             elif col == 'Rate' or col == 'Target Rate':
@@ -152,6 +156,7 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
     ])
     
     # Resaltar columna de Rate según Target Rate
+    # NO ESTÁ FUNCIONANDO CORRECTAMENTE
     for i in range(1, len(data) - 1):  # Excluir encabezado y total
         try:
             rate = float(data[i][6]) if data[i][6] else 0
@@ -169,9 +174,9 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
     table.setStyle(table_style)
     elements.append(table)
     
-    # ============================================
-    # SEGUNDA TABLA: TOP CONTRIBUIDORES (Página 2)
-    # ============================================
+    # ========================================================================================
+    #                         SEGUNDA TABLA: TOP CONTRIBUIDORES (Página 2)
+    # ========================================================================================
     
     if contributors_df is not None and not contributors_df.empty:
         
@@ -183,7 +188,7 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
             'ContributorsTitle',
             parent=styles['Heading2'],
             fontSize=18,
-            textColor=colors.HexColor('#d62728'),
+            textColor=colors.black,
             spaceAfter=15,
             alignment=TA_CENTER,
             fontName='Helvetica-Bold'
@@ -194,7 +199,7 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
         
         # Preparar datos de contribuidores
         contrib_data = []
-        contrib_headers = ['Lugar', 'Número de Parte', 'Descripción', 'Cantidad', 'Monto (dls)']
+        contrib_headers = ['Ranking', 'Número de Parte', 'Descripción', 'Cantidad', 'Monto (dls)']
         contrib_data.append(contrib_headers)
         
         for index, row in contributors_df.iterrows():
@@ -268,7 +273,7 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
             textColor=colors.grey,
             alignment=TA_RIGHT
         )
-        footer_text = "Generado automáticamente por Sistema de Análisis de Scrap Rate by Oscar Teran"
+        footer_text = "Generado automáticamente por Sistema de Análisis de Scrap desarrollado por Oscar Teran"
         footer = Paragraph(footer_text, footer_style)
         elements.append(footer)
         
@@ -282,7 +287,7 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
             textColor=colors.grey,
             alignment=TA_RIGHT
         )
-        footer_text = "Generado automáticamente por Sistema de Análisis de Scrap Rate by Oscar Teran"
+        footer_text = "Generado automáticamente por Sistema de Análisis de Scrap desarrollado por Oscar Teran"
         footer = Paragraph(footer_text, footer_style)
         elements.append(footer)
     
