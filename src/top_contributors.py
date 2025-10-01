@@ -1,0 +1,148 @@
+"""
+Módulo para análisis de principales contribuidores de scrap
+"""
+
+import pandas as pd
+from colorama import Fore, Style
+
+
+def get_top_contributors(scrap_df, week_number, year, top_n=10):
+    """
+    Obtiene los principales contribuidores de scrap para una semana específica
+    IMPORTANTE: Devuelve los items con MAYOR monto total en dólares
+    
+    Args:
+        scrap_df (DataFrame): DataFrame con datos de scrap
+        week_number (int): Número de semana a procesar
+        year (int): Año a procesar
+        top_n (int): Número de principales contribuidores a mostrar (default: 10)
+        
+    Returns:
+        DataFrame: DataFrame con los principales contribuidores o None si no hay datos
+    """
+    
+    # Hacer una copia para no modificar el original
+    scrap_df = scrap_df.copy()
+    
+    # Convertir columnas de fecha a datetime
+    scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'])
+    
+    # Agregar columnas de semana y año
+    scrap_df['Week'] = scrap_df['Create Date'].dt.strftime('%U').astype(int)
+    scrap_df['Year'] = scrap_df['Create Date'].dt.year
+    
+    # Filtrar por semana específica
+    scrap_week = scrap_df[(scrap_df['Week'] == week_number) & (scrap_df['Year'] == year)]
+    
+    if scrap_week.empty:
+        return None
+    
+    # Hacer copia para modificar
+    scrap_week = scrap_week.copy()
+    
+    # Convertir a valores positivos ANTES de agrupar
+    # IMPORTANTE: Los valores están en negativo, usamos abs() para asegurar positivos
+    scrap_week['Quantity'] = scrap_week['Quantity'].abs()
+    scrap_week['Total Posted'] = scrap_week['Total Posted'].abs()
+    
+    # AGRUPAR por Item y SUMAR todos los registros del mismo item
+    # Esto combina todas las veces que aparece el mismo número de parte
+    contributors = scrap_week.groupby('Item', as_index=False).agg({
+        'Description': 'first',      # Tomar la primera descripción
+        'Quantity': 'sum',            # SUMAR todas las cantidades del mismo item
+        'Total Posted': 'sum'         # SUMAR todos los montos del mismo item (YA EN POSITIVO)
+    })
+    
+    # ORDENAR por monto total de MAYOR a MENOR (descendente)
+    # ascending=False significa que los valores MÁS GRANDES van primero
+    contributors = contributors.sort_values('Total Posted', ascending=False)
+    
+    # RESETEAR índice después de ordenar
+    contributors = contributors.reset_index(drop=True)
+    
+    # Tomar solo los top N (los que tienen mayor monto)
+    contributors = contributors.head(top_n)
+    
+    # Agregar columna de Lugar (1, 2, 3, etc.)
+    contributors.insert(0, 'Lugar', range(1, len(contributors) + 1))
+    
+    # Renombrar columnas para el reporte
+    contributors = contributors.rename(columns={
+        'Item': 'Número de Parte',
+        'Description': 'Descripción',
+        'Quantity': 'Cantidad Scrapeada',
+        'Total Posted': 'Monto (dls)'
+    })
+    
+    # Agregar fila de totales al final
+    total_row = pd.DataFrame({
+        'Lugar': ['TOTAL'],
+        'Número de Parte': [''],
+        'Descripción': [''],
+        'Cantidad Scrapeada': [contributors['Cantidad Scrapeada'].sum()],
+        'Monto (dls)': [contributors['Monto (dls)'].sum()]
+    })
+    
+    contributors = pd.concat([contributors, total_row], ignore_index=True)
+    
+    return contributors
+
+
+def format_contributors_output(df):
+    """
+    Formatea el DataFrame de contribuidores para visualización en consola
+    
+    Args:
+        df (DataFrame): DataFrame con los principales contribuidores
+    """
+    if df is None:
+        return
+    
+    # Crear copia para formatear
+    output = df.copy()
+    
+    # Formatear columnas numéricas
+    formatted_rows = []
+    
+    for index, row in output.iterrows():
+        formatted_row = {}
+        
+        for col in output.columns:
+            value = row[col]
+            
+            if col == 'Cantidad Scrapeada':
+                formatted_row[col] = f"{value:,.2f}" if isinstance(value, (int, float)) else value
+            elif col == 'Monto (dls)':
+                if isinstance(value, (int, float)):
+                    # Colorear en rojo los montos más altos
+                    formatted_row[col] = f"{Fore.RED}${value:,.2f}{Style.RESET_ALL}"
+                else:
+                    formatted_row[col] = value
+            else:
+                formatted_row[col] = value if value != '' else ''
+        
+        formatted_rows.append(formatted_row)
+    
+    # Crear nuevo DataFrame con los valores formateados
+    formatted_df = pd.DataFrame(formatted_rows)
+    
+    # Imprimir reporte formateado
+    print("\n" + "="*120)
+    print("TOP CONTRIBUIDORES DE SCRAP (MAYOR MONTO EN DÓLARES)")
+    print("="*120)
+    print(formatted_df.to_string(index=False))
+    print("="*120 + "\n")
+
+
+def export_contributors_to_console(scrap_df, week, year, top_n=10):
+    """
+    Exporta el reporte de contribuidores (sin imprimir en consola)
+    
+    Args:
+        scrap_df (DataFrame): DataFrame con datos de scrap
+        week (int): Número de semana
+        year (int): Año del reporte
+        top_n (int): Número de principales contribuidores a mostrar
+    """
+    contributors = get_top_contributors(scrap_df, week, year, top_n)
+    return contributors
