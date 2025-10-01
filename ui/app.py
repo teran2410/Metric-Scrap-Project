@@ -6,9 +6,9 @@ import customtkinter as ctk
 from tkinter import messagebox
 from datetime import datetime
 import os
+import threading
 
 from src.data_processor import load_data, process_weekly_data
-from src.report_formatter import export_to_console
 from src.pdf_generator import generate_pdf_report
 from src.top_contributors import export_contributors_to_console
 from config import APP_TITLE, APP_WIDTH, APP_HEIGHT, APP_THEME, APP_COLOR_THEME
@@ -23,12 +23,6 @@ class ScrapRateApp(ctk.CTk):
         # Configuración de la ventana
         self.title(APP_TITLE)
         self.geometry(f"{APP_WIDTH}x{APP_HEIGHT}")
-        
-        # Variable para almacenar el último resultado
-        self.last_result = None
-        self.last_contributors = None
-        self.last_week = None
-        self.last_year = None
         
         # Configurar el tema
         ctk.set_appearance_mode(APP_THEME)
@@ -91,32 +85,58 @@ class ScrapRateApp(ctk.CTk):
         self.week_entry.insert(0, str(self.current_week))
         self.week_entry.pack(pady=5)
         
-        # Botón para generar reporte en consola
-        generate_button = ctk.CTkButton(
+        # Barra de progreso (inicialmente oculta)
+        self.progress_bar = ctk.CTkProgressBar(
             self,
-            text="Generar Reporte en Consola",
-            command=self.generate_report,
             width=250,
-            height=40,
-            font=ctk.CTkFont(size=14, weight="bold")
+            height=15,
+            mode="indeterminate"
         )
-        generate_button.pack(pady=(20, 10))
         
-        # Botón para generar PDF
-        pdf_button = ctk.CTkButton(
+        # Label de estado (inicialmente oculto)
+        self.status_label = ctk.CTkLabel(
             self,
-            text="📄 Generar PDF",
-            command=self.generate_pdf,
+            text="",
+            font=ctk.CTkFont(size=12),
+            text_color="gray"
+        )
+        
+        # Botón único para generar PDF
+        self.pdf_button = ctk.CTkButton(
+            self,
+            text="📄 Generar Reporte PDF",
+            command=self.start_pdf_generation,
             width=250,
-            height=40,
-            font=ctk.CTkFont(size=14, weight="bold"),
+            height=50,
+            font=ctk.CTkFont(size=16, weight="bold"),
             fg_color="#28a745",
             hover_color="#218838"
         )
-        pdf_button.pack(pady=10)
+        self.pdf_button.pack(pady=30)
         
-    def generate_report(self):
-        """Genera el reporte con los valores ingresados"""
+    def show_progress(self, message):
+        """Muestra la barra de progreso y el mensaje de estado"""
+        self.status_label.configure(text=message)
+        self.status_label.pack(pady=(5, 0))
+        self.progress_bar.pack(pady=(10, 20))
+        self.progress_bar.start()
+        self.pdf_button.configure(state="disabled")
+        
+    def hide_progress(self):
+        """Oculta la barra de progreso"""
+        self.progress_bar.stop()
+        self.progress_bar.pack_forget()
+        self.status_label.pack_forget()
+        self.pdf_button.configure(state="normal")
+        
+    def start_pdf_generation(self):
+        """Inicia la generación del PDF en un hilo separado"""
+        # Ejecutar en un hilo para no bloquear la UI
+        thread = threading.Thread(target=self.generate_pdf, daemon=True)
+        thread.start()
+        
+    def generate_pdf(self):
+        """Genera el PDF directamente con todos los datos"""
         try:
             # Obtener valores de los entries
             year = int(self.year_entry.get())
@@ -124,94 +144,88 @@ class ScrapRateApp(ctk.CTk):
             
             # Validar semana
             if week < 0 or week > 53:
-                messagebox.showerror("Error", "La semana debe estar entre 0 y 53")
+                self.after(0, lambda: messagebox.showerror("Error", "La semana debe estar entre 0 y 53"))
                 return
             
             # Validar año
             if year < 2000 or year > 2100:
-                messagebox.showerror("Error", "Ingrese un año válido")
+                self.after(0, lambda: messagebox.showerror("Error", "Ingrese un año válido"))
                 return
+            
+            # Mostrar progreso - Paso 1: Cargando datos
+            self.after(0, lambda: self.show_progress("⏳ Cargando datos..."))
             
             # Cargar datos
             scrap_df, ventas_df, horas_df = load_data()
             
             if scrap_df is None:
-                messagebox.showerror(
+                self.after(0, self.hide_progress)
+                self.after(0, lambda: messagebox.showerror(
                     "Error", 
                     "No se pudo cargar el archivo.\nVerifique que 'test pandas.xlsx' exista en la carpeta 'data/'"
-                )
+                ))
                 return
             
-            # Procesar datos
+            # Paso 2: Procesando datos
+            self.after(0, lambda: self.status_label.configure(text="⚙️  Procesando datos..."))
+            
+            # Procesar datos del reporte semanal
             result = process_weekly_data(scrap_df, ventas_df, horas_df, week, year)
             
-            # Guardar resultado para PDF
-            self.last_result = result
-            self.last_week = week
-            self.last_year = year
+            if result is None:
+                self.after(0, self.hide_progress)
+                self.after(0, lambda: messagebox.showwarning(
+                    "Sin datos", 
+                    f"⚠️  No se encontraron datos para:\n\nSemana: {week}\nAño: {year}"
+                ))
+                return
             
-            # Exportar a consola (deshabilitado)
-            export_to_console(result, week, year)
+            # Paso 3: Analizando contribuidores
+            self.after(0, lambda: self.status_label.configure(text="📊 Analizando contribuidores..."))
             
             # Generar top contribuidores
             contributors = export_contributors_to_console(scrap_df, week, year, top_n=10)
-            self.last_contributors = contributors
             
-            if result is not None:
-                messagebox.showinfo(
-                    "Éxito", 
-                    f"✅ Reporte generado exitosamente\n\nSemana: {week}\nAño: {year}"
-                )
-            else:
-                messagebox.showwarning(
-                    "Sin datos", 
-                    f"⚠️  No se encontraron datos para:\n\nSemana: {week}\nAño: {year}"
-                )
-                
-        except ValueError:
-            messagebox.showerror("Error", "❌ Ingrese valores numéricos válidos")
-        except Exception as e:
-            messagebox.showerror("Error", f"❌ Ocurrió un error:\n\n{str(e)}")
-    
-    def generate_pdf(self):
-        """Genera un PDF con el último reporte generado"""
-        if self.last_result is None:
-            messagebox.showwarning(
-                "Advertencia",
-                "⚠️  Primero debe generar un reporte en consola"
-            )
-            return
-        
-        try:
+            # Paso 4: Generando PDF
+            self.after(0, lambda: self.status_label.configure(text="📄 Generando PDF..."))
+            
+            # Generar PDF con ambas tablas
             filepath = generate_pdf_report(
-                self.last_result,
-                self.last_contributors,
-                self.last_week, 
-                self.last_year
+                result,
+                contributors,
+                week, 
+                year
             )
+            
+            # Ocultar progreso
+            self.after(0, self.hide_progress)
             
             if filepath:
                 # Abrir la carpeta donde se guardó el PDF
                 folder_path = os.path.dirname(filepath)
                 
-                messagebox.showinfo(
+                self.after(0, lambda: messagebox.showinfo(
                     "PDF Generado",
                     f"✅ PDF generado exitosamente:\n\n{os.path.basename(filepath)}\n\nUbicación: {folder_path}"
-                )
+                ))
                 
-                # Opcional: abrir la carpeta automáticamente
+                # Abrir la carpeta automáticamente
                 try:
                     if os.name == 'nt':  # Windows
                         os.startfile(folder_path)
                     elif os.name == 'posix':  # macOS y Linux
                         os.system(f'open "{folder_path}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{folder_path}"')
                 except:
-                    pass  # Si no se puede abrir la carpeta, no pasa nada
+                    pass
             else:
-                messagebox.showerror("Error", "❌ No se pudo generar el PDF")
+                self.after(0, lambda: messagebox.showerror("Error", "❌ No se pudo generar el PDF"))
                 
+        except ValueError:
+            self.after(0, self.hide_progress)
+            self.after(0, lambda: messagebox.showerror("Error", "❌ Ingrese valores numéricos válidos"))
         except Exception as e:
-            messagebox.showerror("Error", f"❌ Error al generar PDF:\n\n{str(e)}")
+            self.after(0, self.hide_progress)
+            self.after(0, lambda: messagebox.showerror("Error", f"❌ Ocurrió un error:\n\n{str(e)}"))
 
 
 def run_app():

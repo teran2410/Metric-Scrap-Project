@@ -33,9 +33,8 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
     
-    # Nombre del archivo
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"Scrap_Rate_W{week}_{year}_{timestamp}.pdf"
+    # Nombre del archivo 
+    filename = f"Scrap_Rate_W{week}_{year}.pdf"
     filepath = os.path.join(output_folder, filename)
     
     # Crear el documento PDF
@@ -170,18 +169,14 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
     table.setStyle(table_style)
     elements.append(table)
     
-    # Agregar salto de página para la segunda tabla
-    elements.append(PageBreak())
-    
     # ============================================
     # SEGUNDA TABLA: TOP CONTRIBUIDORES (Página 2)
     # ============================================
+    
     if contributors_df is not None and not contributors_df.empty:
-        # Título de la segunda página
-        page2_title = Paragraph("REPORTE SEMANAL DE SCRAP RATE", title_style)
-        elements.append(page2_title)
-        elements.append(Paragraph(subtitle_text, subtitle_style))
-        elements.append(Spacer(1, 0.3*inch))
+        
+        # Agregar salto de página para la segunda tabla
+        elements.append(PageBreak())
         
         # Título de la segunda sección
         contributors_title_style = ParagraphStyle(
@@ -265,7 +260,6 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
         contrib_table.setStyle(contrib_table_style)
         elements.append(contrib_table)
         
-        # Agregar nota al pie en la misma página
         elements.append(Spacer(1, 0.3*inch))
         footer_style = ParagraphStyle(
             'Footer',
@@ -274,12 +268,13 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
             textColor=colors.grey,
             alignment=TA_RIGHT
         )
-        footer_text = "Generado automáticamente por Sistema de Análisis de Scrap Rate"
+        footer_text = "Generado automáticamente por Sistema de Análisis de Scrap Rate by Oscar Teran"
         footer = Paragraph(footer_text, footer_style)
         elements.append(footer)
+        
     else:
         # Si no hay contribuidores, agregar nota al pie después de la primera tabla
-        elements.append(Spacer(1, 0.5*inch))
+        elements.append(Spacer(1, 0.3*inch))
         footer_style = ParagraphStyle(
             'Footer',
             parent=styles['Normal'],
@@ -287,7 +282,7 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
             textColor=colors.grey,
             alignment=TA_RIGHT
         )
-        footer_text = "Generado automáticamente por Sistema de Análisis de Scrap Rate"
+        footer_text = "Generado automáticamente por Sistema de Análisis de Scrap Rate by Oscar Teran"
         footer = Paragraph(footer_text, footer_style)
         elements.append(footer)
     
