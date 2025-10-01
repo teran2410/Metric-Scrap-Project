@@ -32,7 +32,7 @@ HORAS_SHEET_NAME = 'Horas Database'
 # ============================================
 # CONFIGURACIÓN DE LA APLICACIÓN
 # ============================================
-APP_TITLE = "Análisis de Scrap Rate"
+APP_TITLE = "Análisis del Métrico de Scrap"
 APP_WIDTH = 400
 APP_HEIGHT = 450
 APP_THEME = "dark"

@@ -254,15 +254,24 @@ class ScrapRateApp(ctk.CTk):
                 
                 self.after(0, lambda: messagebox.showinfo(
                     "PDF Generado",
-                    f"✅ PDF generado exitosamente:\n\n{os.path.basename(filepath)}\n\nUbicación: {folder_path}"
+                    f"PDF generado exitosamente:\n\n{os.path.basename(filepath)}\n\nUbicación: {folder_path}"
                 ))
                 
                 # Abrir la carpeta automáticamente
+                # try:
+                #     if os.name == 'nt':  # Windows
+                #         os.startfile(folder_path)
+                #     elif os.name == 'posix':  # macOS y Linux
+                #         os.system(f'open "{folder_path}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{folder_path}"')
+                # except:
+                #     pass
+
+                # Abrir el PDF automáticamente (opcional)
                 try:
                     if os.name == 'nt':  # Windows
-                        os.startfile(folder_path)
+                        os.startfile(filepath)
                     elif os.name == 'posix':  # macOS y Linux
-                        os.system(f'open "{folder_path}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{folder_path}"')
+                        os.system(f'open "{filepath}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{filepath}"')
                 except:
                     pass
             else:
