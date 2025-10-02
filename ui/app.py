@@ -58,7 +58,7 @@ class ScrapRateApp(ctk.CTk):
         # Título principal
         title_label = ctk.CTkLabel(
             self, 
-            text="Análisis de Scrap Rate",
+            text="Análisis del Métrico de Scrap",
             font=ctk.CTkFont(size=22, weight="bold")
         )
         title_label.pack(pady=(20, 5))
@@ -78,11 +78,15 @@ class ScrapRateApp(ctk.CTk):
         
         # Agregar pestañas
         self.tabview.add("Semanal")
-        self.tabview.add("Mensual")
+        self.tabview.add("Mensual") # Pestaña futura
+        self.tabview.add("Trimestral")  # Pestaña futura
+        self.tabview.add("Anual")  # Pestaña futura
         
         # Crear contenido de cada pestaña
         self.create_weekly_tab()
         self.create_monthly_tab()
+        self.create_trimestral_tab()
+        self.create_anual_tab()
         
     def create_weekly_tab(self):
         """Crea el contenido de la pestaña Semanal"""
@@ -92,7 +96,7 @@ class ScrapRateApp(ctk.CTk):
         year_label = ctk.CTkLabel(
             weekly_frame,
             text="Año:",
-            font=ctk.CTkFont(size=14)
+            font=ctk.CTkFont(size=14, weight="bold")
         )
         year_label.pack(pady=(20, 5))
         
@@ -115,7 +119,7 @@ class ScrapRateApp(ctk.CTk):
         week_label = ctk.CTkLabel(
             weekly_frame,
             text="Semana:",
-            font=ctk.CTkFont(size=14)
+            font=ctk.CTkFont(size=14, weight="bold")
         )
         week_label.pack(pady=(15, 5))
         
@@ -181,6 +185,48 @@ class ScrapRateApp(ctk.CTk):
             text_color="gray"
         )
         description_label.pack(pady=10)
+        
+    def create_trimestral_tab(self):
+        """Crea el contenido de la pestaña Trimestral (en preparación)"""
+        monthly_frame = self.tabview.tab("Trimestral")
+        
+        # Label informativo
+        info_label = ctk.CTkLabel(
+            monthly_frame,
+            text="Módulo en desarrollo",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color="orange"
+        )
+        info_label.pack(pady=60)
+        
+        description_label = ctk.CTkLabel(
+            monthly_frame,
+            text="Esta funcionalidad estará disponible próximamente.\nPermitirá generar reportes trimestrales consolidados.",
+            font=ctk.CTkFont(size=12),
+            text_color="gray"
+        )
+        description_label.pack(pady=10)
+    
+    def create_anual_tab(self):
+        """Crea el contenido de la pestaña Anual (en preparación)"""
+        monthly_frame = self.tabview.tab("Anual")
+        
+        # Label informativo
+        info_label = ctk.CTkLabel(
+            monthly_frame,
+            text="Módulo en desarrollo",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color="orange"
+        )
+        info_label.pack(pady=60)
+        
+        description_label = ctk.CTkLabel(
+            monthly_frame,
+            text="Esta funcionalidad estará disponible próximamente.\nPermitirá generar reportes anuales consolidados.",
+            font=ctk.CTkFont(size=12),
+            text_color="gray"
+        )
+        description_label.pack(pady=10)
     
     def on_year_change(self, selected_year):
         """Actualiza las semanas disponibles cuando cambia el año"""
@@ -208,9 +254,9 @@ class ScrapRateApp(ctk.CTk):
         # Actualizar el combobox
         self.week_combobox.configure(values=weeks_list)
         
-        # Seleccionar la última semana disponible
+        # Seleccionar la penúltima semana disponible
         if weeks_list:
-            self.week_combobox.set(str(max_week))
+            self.week_combobox.set(str(max_week - 1))
         else:
             self.week_combobox.set("")
         
