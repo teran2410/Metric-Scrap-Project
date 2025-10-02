@@ -233,7 +233,7 @@ class ScrapRateApp(ctk.CTk):
                 return
             
             # Mostrar progreso - Paso 1: Cargando datos
-            self.after(0, lambda: self.show_weekly_progress("Cargando datos..."))
+            self.after(0, lambda: self.show_weekly_progress("⌛ Cargando datos..."))
             
             # Cargar datos
             scrap_df, ventas_df, horas_df = load_data()
@@ -247,7 +247,7 @@ class ScrapRateApp(ctk.CTk):
                 return
             
             # Paso 2: Procesando datos
-            self.after(0, lambda: self.weekly_status_label.configure(text="Procesando datos..."))
+            self.after(0, lambda: self.weekly_status_label.configure(text="⚙️ Procesando datos..."))
             
             # Procesar datos del reporte semanal
             result = process_weekly_data(scrap_df, ventas_df, horas_df, week, year)
@@ -261,13 +261,13 @@ class ScrapRateApp(ctk.CTk):
                 return
             
             # Paso 3: Analizando contribuidores
-            self.after(0, lambda: self.weekly_status_label.configure(text="Analizando contribuidores..."))
+            self.after(0, lambda: self.weekly_status_label.configure(text="🔍 Analizando contribuidores..."))
             
             # Generar top contribuidores
             contributors = export_contributors_to_console(scrap_df, week, year, top_n=10)
             
             # Paso 4: Generando PDF
-            self.after(0, lambda: self.weekly_status_label.configure(text="Generando PDF..."))
+            self.after(0, lambda: self.weekly_status_label.configure(text="📄 Generando PDF..."))
             
             # Generar PDF con ambas tablas y scrap_df para análisis de locations
             filepath = generate_pdf_report(

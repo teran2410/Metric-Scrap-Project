@@ -186,7 +186,7 @@ def generate_pdf_report(df, contributors_df, week, year, scrap_df=None, output_f
             alignment=TA_CENTER,
             fontName='Helvetica-Bold'
         )
-        contributors_title = Paragraph("TOP CONTRIBUTORS OF SCRAP", contributors_title_style)
+        contributors_title = Paragraph("TOP CONTRIBUIDORES DE SCRAP", contributors_title_style)
         elements.append(contributors_title)
         elements.append(Spacer(1, 0.3*inch))
         
