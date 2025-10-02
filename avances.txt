@@ -1,0 +1,2 @@
+en la app.py me quede trabajando con la ui del tab montly, falta generar la funcion para actualizar los meses del anio en curso.
+despues la logica para generar el pfd con los datos mensuales.

@@ -169,6 +169,29 @@ class ScrapRateApp(ctk.CTk):
         """Crea el contenido de la pestaña Mensual (en preparación)"""
         monthly_frame = self.tabview.tab("Mensual")
         
+        # # Label y Dropdown para Año
+        # year_label = ctk.CTkLabel(
+        #     monthly_frame,
+        #     text="Año:",
+        #     font=ctk.CTkFont(size=14, weight="bold")
+        # )
+        # year_label.pack(pady=(20, 5))
+        
+        # # Dropdown para Año (2023 hasta año actual)
+        # current_year = datetime.now().year
+        # years_list = [str(year) for year in range(2023, current_year + 1)]
+        
+        # self.year_combobox = ctk.CTkComboBox(
+        #     monthly_frame,
+        #     values=years_list,
+        #     width=200,
+        #     justify="center",
+        #     command=self.on_year_change,
+        #     state="readonly"
+        # )
+        # self.year_combobox.set(str(self.current_year))
+        # self.year_combobox.pack(pady=5)
+        
         # Label informativo
         info_label = ctk.CTkLabel(
             monthly_frame,
