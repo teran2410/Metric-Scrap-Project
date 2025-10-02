@@ -269,12 +269,13 @@ class ScrapRateApp(ctk.CTk):
             # Paso 4: Generando PDF
             self.after(0, lambda: self.weekly_status_label.configure(text="Generando PDF..."))
             
-            # Generar PDF con ambas tablas
+            # Generar PDF con ambas tablas y scrap_df para análisis de locations
             filepath = generate_pdf_report(
                 result,
                 contributors,
                 week, 
-                year
+                year,
+                scrap_df  # Agregar scrap_df para el gráfico de Pareto de celdas
             )
             
             # Ocultar progreso
@@ -289,12 +290,18 @@ class ScrapRateApp(ctk.CTk):
                     f"PDF generado exitosamente:\n\n{os.path.basename(filepath)}\n\nUbicación: {folder_path}"
                 ))
                 
-                # Abrir la carpeta automáticamente
+                # # Abrir la carpeta automáticamente
+                # try:
+                #     if os.name == 'nt':  # Windows
+                #         os.startfile(folder_path)
+                #     elif os.name == 'posix':  # macOS y Linux
+                #         os.system(f'open "{folder_path}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{folder_path}"')
+                # Abrir el archivo PDF directamente
                 try:
                     if os.name == 'nt':  # Windows
-                        os.startfile(folder_path)
+                        os.startfile(filepath)
                     elif os.name == 'posix':  # macOS y Linux
-                        os.system(f'open "{folder_path}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{folder_path}"')
+                        os.system(f'open "{filepath}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{filepath}"')
                 except:
                     pass
             else:

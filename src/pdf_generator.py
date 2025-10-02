@@ -16,9 +16,10 @@ import os
 import matplotlib
 matplotlib.use("Agg")  # usar backend no interactivo
 import matplotlib.pyplot as plt
+from src.location_analysis import get_location_contributors
 
 
-def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'):
+def generate_pdf_report(df, contributors_df, week, year, scrap_df=None, output_folder='reports'):
     """
     Genera un PDF con el reporte de Scrap Rate y principales contribuidores
     
@@ -27,6 +28,7 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
         contributors_df (DataFrame): DataFrame con los principales contribuidores
         week (int): Número de semana
         year (int): Año del reporte
+        scrap_df (DataFrame): DataFrame original con datos de scrap (para análisis de locations)
         output_folder (str): Carpeta donde se guardará el PDF
         
     Returns:
@@ -136,38 +138,39 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
     elements.append(table)
     
     # ========================================================================================
-    #                         SEGUNDA PÁGINA: GRÁFICA DE RATES
+    #                         SEGUNDA PÁGINA: GRÁFICAS
     # ========================================================================================
     elements.append(PageBreak())
     
-    # Crear la gráfica con matplotlib
+    # --- GRÁFICA 1: SCRAP RATE POR DÍA ---
     days = df['Day'][:-1]  # Excluir fila de totales
     rates = df['Rate'][:-1]
     target = df['Target Rate'].iloc[0] if 'Target Rate' in df.columns else 0.0
     
-    plt.figure(figsize=(8, 4))
-    bars = plt.bar(days, rates, color='green')
+    fig, ax1 = plt.subplots(figsize=(8, 3))
+    bars = ax1.bar(days, rates, color='green')
     
     # Resaltar si pasa el target
     for bar, rate in zip(bars, rates):
         if rate > target:
             bar.set_color('grey')
-        plt.text(bar.get_x() + bar.get_width()/2, bar.get_height(),
+        ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height(),
                  f"{rate:.2f}", ha='center', va='bottom', fontsize=9, fontweight='bold')
     
-    plt.axhline(y=target, color='blue', linewidth=2)
-    plt.title("SCRAP RATE POR DÍA", fontsize=14, fontweight='bold')
-    plt.ylabel("Rate")
+    ax1.axhline(y=target, color='blue', linewidth=2)
+    ax1.set_title("SCRAP RATE POR DÍA", fontsize=14, fontweight='bold')
+    ax1.set_ylabel("Rate")
     plt.tight_layout()
     
-    # Guardar imagen temporal
-    chart_path = os.path.join(output_folder, "temp_chart.png")
-    plt.savefig(chart_path)
+    # Guardar imagen temporal 1
+    chart1_path = os.path.join(output_folder, "temp_chart_rates.png")
+    plt.savefig(chart1_path, dpi=100)
     plt.close()
     
-    # Insertar imagen en PDF
-    img = Image(chart_path, width=7*inch, height=3.5*inch)
-    elements.append(img)
+    # Insertar primera gráfica en PDF
+    img1 = Image(chart1_path, width=7*inch, height=2.5*inch)
+    elements.append(img1)
+    elements.append(Spacer(1, 0.3*inch))
     
     # ========================================================================================
     #                         PÁGINA 3: CONTRIBUIDORES (si existen)
@@ -266,8 +269,13 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
     # Construir PDF
     doc.build(elements)
     
-    # Limpiar imagen temporal
-    if os.path.exists(chart_path):
-        os.remove(chart_path)
+    # Limpiar imágenes temporales
+    if os.path.exists(chart1_path):
+        os.remove(chart1_path)
+    try:
+        if os.path.exists(chart2_path):
+            os.remove(chart2_path)
+    except:
+        pass
     
     return filepath
