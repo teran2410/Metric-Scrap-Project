@@ -187,8 +187,9 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
         elements.append(contributors_title)
         elements.append(Spacer(1, 0.3*inch))
         
+        # Preparar datos de contribuidores CON % ACUMULADO
         contrib_data = []
-        contrib_headers = ['Ranking', 'Part Number', 'Description', 'Quantity', 'Amount (USD)']
+        contrib_headers = ['Ranking', 'Part Number', 'Description', 'Quantity', 'Amount (USD)', '% Cumulative']
         contrib_data.append(contrib_headers)
         
         for index, row in contributors_df.iterrows():
@@ -199,6 +200,11 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
                     row_data.append(f"{value:,.2f}" if isinstance(value, (int, float)) else str(value))
                 elif col == 'Monto (dls)':
                     row_data.append(f"${value:,.2f}" if isinstance(value, (int, float)) else str(value))
+                elif col == '% Acumulado':
+                    if isinstance(value, (int, float)):
+                        row_data.append(f"{value:.2f}%")
+                    else:
+                        row_data.append(str(value))
                 else:
                     row_data.append(str(value) if value != '' else '')
             contrib_data.append(row_data)
@@ -227,13 +233,41 @@ def generate_pdf_report(df, contributors_df, week, year, output_folder='reports'
             ('ALIGN', (2, 1), (2, -1), 'LEFT'),
         ])
         
-        for i in range(1, min(4, len(contrib_data))):
-            contrib_table_style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor('#ffcccc'))
+        # Pintar de rojo las filas hasta alcanzar el 80% acumulado
+        for i in range(1, len(contrib_data) - 1):  # Excluir encabezado y total
+            try:
+                # La columna % Acumulado es la última (índice -1)
+                cumulative_str = contrib_data[i][-1]
+                # Quitar el símbolo % y convertir a float
+                cumulative = float(cumulative_str.replace('%', ''))
+                
+                if cumulative <= 80.0:
+                    # Pintar toda la fila de rojo claro hasta el 80%
+                    contrib_table_style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor('#ffcccc'))
+            except (ValueError, IndexError):
+                pass
         
         contrib_table.setStyle(contrib_table_style)
         elements.append(contrib_table)
+        
+        # Footer
+        elements.append(Spacer(1, 0.3*inch))
+        footer_style = ParagraphStyle(
+            'Footer',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor=colors.grey,
+            alignment=TA_RIGHT
+        )
+        footer_text = "Generado automáticamente por Sistema de Análisis de Scrap Rate by Oscar Teran"
+        footer = Paragraph(footer_text, footer_style)
+        elements.append(footer)
     
     # Construir PDF
     doc.build(elements)
+    
+    # Limpiar imagen temporal
+    if os.path.exists(chart_path):
+        os.remove(chart_path)
     
     return filepath

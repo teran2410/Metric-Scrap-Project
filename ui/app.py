@@ -22,7 +22,7 @@ class ScrapRateApp(ctk.CTk):
         
         # Configuración de la ventana
         self.title(APP_TITLE)
-        self.geometry(f"{APP_WIDTH}x{APP_HEIGHT}")
+        self.geometry(f"{APP_WIDTH}x{APP_HEIGHT + 50}")  # Aumentar altura para tabs
         
         # Configurar el tema
         ctk.set_appearance_mode(APP_THEME)
@@ -39,21 +39,33 @@ class ScrapRateApp(ctk.CTk):
     def create_widgets(self):
         """Crea todos los widgets de la interfaz"""
         
-        # Título
+        # Título principal
         title_label = ctk.CTkLabel(
             self, 
-            text="Reporte Semanal de Scrap Rate",
-            font=ctk.CTkFont(size=20, weight="bold")
+            text="Análisis de Scrap Rate",
+            font=ctk.CTkFont(size=22, weight="bold")
         )
         title_label.pack(pady=20)
         
-        # Frame para los inputs
-        input_frame = ctk.CTkFrame(self)
-        input_frame.pack(pady=20, padx=40, fill="both", expand=True)
+        # Crear TabView (pestañas)
+        self.tabview = ctk.CTkTabview(self, width=360, height=320)
+        self.tabview.pack(pady=10, padx=40)
+        
+        # Agregar pestañas
+        self.tabview.add("Semanal")
+        self.tabview.add("Mensual")
+        
+        # Crear contenido de cada pestaña
+        self.create_weekly_tab()
+        self.create_monthly_tab()
+        
+    def create_weekly_tab(self):
+        """Crea el contenido de la pestaña Semanal"""
+        weekly_frame = self.tabview.tab("Semanal")
         
         # Label y Dropdown para Año
         year_label = ctk.CTkLabel(
-            input_frame,
+            weekly_frame,
             text="Año:",
             font=ctk.CTkFont(size=14)
         )
@@ -64,7 +76,7 @@ class ScrapRateApp(ctk.CTk):
         years_list = [str(year) for year in range(2023, current_year + 1)]
         
         self.year_combobox = ctk.CTkComboBox(
-            input_frame,
+            weekly_frame,
             values=years_list,
             width=200,
             justify="center",
@@ -76,7 +88,7 @@ class ScrapRateApp(ctk.CTk):
         
         # Label y Dropdown para Semana
         week_label = ctk.CTkLabel(
-            input_frame,
+            weekly_frame,
             text="Semana:",
             font=ctk.CTkFont(size=14)
         )
@@ -84,7 +96,7 @@ class ScrapRateApp(ctk.CTk):
         
         # Dropdown para Semana (se actualiza según el año)
         self.week_combobox = ctk.CTkComboBox(
-            input_frame,
+            weekly_frame,
             values=[],
             width=200,
             justify="center",
@@ -96,33 +108,54 @@ class ScrapRateApp(ctk.CTk):
         self.update_weeks_for_year(self.current_year)
         
         # Barra de progreso (inicialmente oculta)
-        self.progress_bar = ctk.CTkProgressBar(
-            self,
+        self.weekly_progress_bar = ctk.CTkProgressBar(
+            weekly_frame,
             width=250,
             height=15,
             mode="indeterminate"
         )
         
         # Label de estado (inicialmente oculto)
-        self.status_label = ctk.CTkLabel(
-            self,
+        self.weekly_status_label = ctk.CTkLabel(
+            weekly_frame,
             text="",
             font=ctk.CTkFont(size=12),
             text_color="gray"
         )
         
-        # Botón único para generar PDF
-        self.pdf_button = ctk.CTkButton(
-            self,
-            text="📄 Generar Reporte PDF",
-            command=self.start_pdf_generation,
+        # Botón para generar PDF semanal
+        self.weekly_pdf_button = ctk.CTkButton(
+            weekly_frame,
+            text="Generar Reporte PDF",
+            command=self.start_weekly_pdf_generation,
             width=250,
             height=50,
             font=ctk.CTkFont(size=16, weight="bold"),
             fg_color="#28a745",
             hover_color="#218838"
         )
-        self.pdf_button.pack(pady=30)
+        self.weekly_pdf_button.pack(pady=20)
+    
+    def create_monthly_tab(self):
+        """Crea el contenido de la pestaña Mensual (en preparación)"""
+        monthly_frame = self.tabview.tab("Mensual")
+        
+        # Label informativo
+        info_label = ctk.CTkLabel(
+            monthly_frame,
+            text="Módulo en desarrollo",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color="orange"
+        )
+        info_label.pack(pady=60)
+        
+        description_label = ctk.CTkLabel(
+            monthly_frame,
+            text="Esta funcionalidad estará disponible próximamente.\nPermitirá generar reportes mensuales consolidados.",
+            font=ctk.CTkFont(size=12),
+            text_color="gray"
+        )
+        description_label.pack(pady=10)
     
     def on_year_change(self, selected_year):
         """Actualiza las semanas disponibles cuando cambia el año"""
@@ -141,7 +174,7 @@ class ScrapRateApp(ctk.CTk):
             # Año actual: solo semanas transcurridas
             max_week = current_week
         else:
-            # Año futuro: no debería llegar aquí, pero por si acaso
+            # Año futuro: no debería llegar aquí
             max_week = 0
         
         # Crear lista de semanas
@@ -156,29 +189,28 @@ class ScrapRateApp(ctk.CTk):
         else:
             self.week_combobox.set("")
         
-    def show_progress(self, message):
-        """Muestra la barra de progreso y el mensaje de estado"""
-        self.status_label.configure(text=message)
-        self.status_label.pack(pady=(5, 0))
-        self.progress_bar.pack(pady=(10, 20))
-        self.progress_bar.start()
-        self.pdf_button.configure(state="disabled")
+    def show_weekly_progress(self, message):
+        """Muestra la barra de progreso semanal"""
+        self.weekly_status_label.configure(text=message)
+        self.weekly_status_label.pack(pady=(5, 0))
+        self.weekly_progress_bar.pack(pady=(10, 20))
+        self.weekly_progress_bar.start()
+        self.weekly_pdf_button.configure(state="disabled")
         
-    def hide_progress(self):
-        """Oculta la barra de progreso"""
-        self.progress_bar.stop()
-        self.progress_bar.pack_forget()
-        self.status_label.pack_forget()
-        self.pdf_button.configure(state="normal")
+    def hide_weekly_progress(self):
+        """Oculta la barra de progreso semanal"""
+        self.weekly_progress_bar.stop()
+        self.weekly_progress_bar.pack_forget()
+        self.weekly_status_label.pack_forget()
+        self.weekly_pdf_button.configure(state="normal")
         
-    def start_pdf_generation(self):
-        """Inicia la generación del PDF en un hilo separado"""
-        # Ejecutar en un hilo para no bloquear la UI
-        thread = threading.Thread(target=self.generate_pdf, daemon=True)
+    def start_weekly_pdf_generation(self):
+        """Inicia la generación del PDF semanal en un hilo separado"""
+        thread = threading.Thread(target=self.generate_weekly_pdf, daemon=True)
         thread.start()
         
-    def generate_pdf(self):
-        """Genera el PDF directamente con todos los datos"""
+    def generate_weekly_pdf(self):
+        """Genera el PDF semanal directamente con todos los datos"""
         try:
             # Obtener valores de los comboboxes
             year = int(self.year_combobox.get())
@@ -201,13 +233,13 @@ class ScrapRateApp(ctk.CTk):
                 return
             
             # Mostrar progreso - Paso 1: Cargando datos
-            self.after(0, lambda: self.show_progress("⏳ Cargando datos..."))
+            self.after(0, lambda: self.show_weekly_progress("Cargando datos..."))
             
             # Cargar datos
             scrap_df, ventas_df, horas_df = load_data()
             
             if scrap_df is None:
-                self.after(0, self.hide_progress)
+                self.after(0, self.hide_weekly_progress)
                 self.after(0, lambda: messagebox.showerror(
                     "Error", 
                     "No se pudo cargar el archivo.\nVerifique que 'test pandas.xlsx' exista en la carpeta 'data/'"
@@ -215,27 +247,27 @@ class ScrapRateApp(ctk.CTk):
                 return
             
             # Paso 2: Procesando datos
-            self.after(0, lambda: self.status_label.configure(text="⚙️  Procesando datos..."))
+            self.after(0, lambda: self.weekly_status_label.configure(text="Procesando datos..."))
             
             # Procesar datos del reporte semanal
             result = process_weekly_data(scrap_df, ventas_df, horas_df, week, year)
             
             if result is None:
-                self.after(0, self.hide_progress)
+                self.after(0, self.hide_weekly_progress)
                 self.after(0, lambda: messagebox.showwarning(
                     "Sin datos", 
-                    f"⚠️  No se encontraron datos para:\n\nSemana: {week}\nAño: {year}"
+                    f"No se encontraron datos para:\n\nSemana: {week}\nAño: {year}"
                 ))
                 return
             
             # Paso 3: Analizando contribuidores
-            self.after(0, lambda: self.status_label.configure(text="📊 Analizando contribuidores..."))
+            self.after(0, lambda: self.weekly_status_label.configure(text="Analizando contribuidores..."))
             
             # Generar top contribuidores
             contributors = export_contributors_to_console(scrap_df, week, year, top_n=10)
             
             # Paso 4: Generando PDF
-            self.after(0, lambda: self.status_label.configure(text="📄 Generando PDF..."))
+            self.after(0, lambda: self.weekly_status_label.configure(text="Generando PDF..."))
             
             # Generar PDF con ambas tablas
             filepath = generate_pdf_report(
@@ -246,7 +278,7 @@ class ScrapRateApp(ctk.CTk):
             )
             
             # Ocultar progreso
-            self.after(0, self.hide_progress)
+            self.after(0, self.hide_weekly_progress)
             
             if filepath:
                 # Abrir la carpeta donde se guardó el PDF
@@ -258,31 +290,22 @@ class ScrapRateApp(ctk.CTk):
                 ))
                 
                 # Abrir la carpeta automáticamente
-                # try:
-                #     if os.name == 'nt':  # Windows
-                #         os.startfile(folder_path)
-                #     elif os.name == 'posix':  # macOS y Linux
-                #         os.system(f'open "{folder_path}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{folder_path}"')
-                # except:
-                #     pass
-
-                # Abrir el PDF automáticamente (opcional)
                 try:
                     if os.name == 'nt':  # Windows
-                        os.startfile(filepath)
+                        os.startfile(folder_path)
                     elif os.name == 'posix':  # macOS y Linux
-                        os.system(f'open "{filepath}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{filepath}"')
+                        os.system(f'open "{folder_path}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{folder_path}"')
                 except:
                     pass
             else:
-                self.after(0, lambda: messagebox.showerror("Error", "❌ No se pudo generar el PDF"))
+                self.after(0, lambda: messagebox.showerror("Error", "No se pudo generar el PDF"))
                 
         except ValueError:
-            self.after(0, self.hide_progress)
-            self.after(0, lambda: messagebox.showerror("Error", "❌ Ingrese valores numéricos válidos"))
+            self.after(0, self.hide_weekly_progress)
+            self.after(0, lambda: messagebox.showerror("Error", "Ingrese valores numéricos válidos"))
         except Exception as e:
-            self.after(0, self.hide_progress)
-            self.after(0, lambda: messagebox.showerror("Error", f"❌ Ocurrió un error:\n\n{str(e)}"))
+            self.after(0, self.hide_weekly_progress)
+            self.after(0, lambda: messagebox.showerror("Error", f"Ocurrió un error:\n\n{str(e)}"))
 
 
 def run_app():
