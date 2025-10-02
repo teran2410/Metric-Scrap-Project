@@ -41,7 +41,7 @@ def get_top_contributors(scrap_df, week_number, year, top_n=10):
     scrap_week = scrap_week.copy()
     
     # Convertir a valores positivos ANTES de agrupar
-    # IMPORTANTE: Los valores están en negativo, usamos abs() para asegurar positivos
+    # IMPORTANTE: Usamos abs() para asegurar valores positivos
     scrap_week['Quantity'] = scrap_week['Quantity'].abs()
     scrap_week['Total Posted'] = scrap_week['Total Posted'].abs()
     
@@ -63,6 +63,13 @@ def get_top_contributors(scrap_df, week_number, year, top_n=10):
     # Tomar solo los top N (los que tienen mayor monto)
     contributors = contributors.head(top_n)
     
+    # CALCULAR PORCENTAJE ACUMULADO basado en el TOTAL de los TOP N
+    total_top_n = contributors['Total Posted'].sum()
+    if total_top_n > 0:
+        contributors['Cumulative %'] = (contributors['Total Posted'].cumsum() / total_top_n * 100).round(2)
+    else:
+        contributors['Cumulative %'] = 0.0
+    
     # Agregar columna de Lugar (1, 2, 3, etc.)
     contributors.insert(0, 'Lugar', range(1, len(contributors) + 1))
     
@@ -71,16 +78,18 @@ def get_top_contributors(scrap_df, week_number, year, top_n=10):
         'Item': 'Número de Parte',
         'Description': 'Descripción',
         'Quantity': 'Cantidad Scrapeada',
-        'Total Posted': 'Monto (dls)'
+        'Total Posted': 'Monto (dls)',
+        'Cumulative %': '% Acumulado'
     })
     
-    # Agregar fila de totales al final
+    # Agregar fila de totales al final (sin % acumulado en total)
     total_row = pd.DataFrame({
         'Lugar': ['TOTAL'],
         'Número de Parte': [''],
         'Descripción': [''],
         'Cantidad Scrapeada': [contributors['Cantidad Scrapeada'].sum()],
-        'Monto (dls)': [contributors['Monto (dls)'].sum()]
+        'Monto (dls)': [contributors['Monto (dls)'].sum()],
+        '% Acumulado': ['']
     })
     
     contributors = pd.concat([contributors, total_row], ignore_index=True)
@@ -116,6 +125,11 @@ def format_contributors_output(df):
                 if isinstance(value, (int, float)):
                     # Colorear en rojo los montos más altos
                     formatted_row[col] = f"{Fore.RED}${value:,.2f}{Style.RESET_ALL}"
+                else:
+                    formatted_row[col] = value
+            elif col == '% Acumulado':
+                if isinstance(value, (int, float)):
+                    formatted_row[col] = f"{value:.2f}%"
                 else:
                     formatted_row[col] = value
             else:
