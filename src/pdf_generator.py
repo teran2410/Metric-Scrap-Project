@@ -65,7 +65,7 @@ def generate_pdf_report(df, contributors_df, week, year, scrap_df=None, output_f
         parent=styles['Heading1'],
         fontSize=24,
         textColor=colors.black,
-        spaceAfter=30,
+        spaceAfter=10,
         alignment=TA_CENTER,
         fontName='Helvetica-Bold'
     )
@@ -75,7 +75,7 @@ def generate_pdf_report(df, contributors_df, week, year, scrap_df=None, output_f
         parent=styles['Normal'],
         fontSize=12,
         textColor=colors.grey,
-        spaceAfter=20,
+        spaceAfter=10,
         alignment=TA_CENTER
     )
     
@@ -137,11 +137,6 @@ def generate_pdf_report(df, contributors_df, week, year, scrap_df=None, output_f
     table.setStyle(table_style)
     elements.append(table)
     
-    # ========================================================================================
-    #                         SEGUNDA PÁGINA: GRÁFICAS
-    # ========================================================================================
-    elements.append(PageBreak())
-    
     # --- GRÁFICA 1: SCRAP RATE POR DÍA ---
     days = df['Day'][:-1]  # Excluir fila de totales
     rates = df['Rate'][:-1]
@@ -157,8 +152,7 @@ def generate_pdf_report(df, contributors_df, week, year, scrap_df=None, output_f
         ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height(),
                  f"{rate:.2f}", ha='center', va='bottom', fontsize=9, fontweight='bold')
     
-    ax1.axhline(y=target, color='blue', linewidth=2)
-    ax1.set_title("SCRAP RATE POR DÍA", fontsize=14, fontweight='bold')
+    ax1.axhline(y=target, color='red', linewidth=2)
     ax1.set_ylabel("Rate")
     plt.tight_layout()
     
@@ -173,7 +167,7 @@ def generate_pdf_report(df, contributors_df, week, year, scrap_df=None, output_f
     elements.append(Spacer(1, 0.3*inch))
     
     # ========================================================================================
-    #                         PÁGINA 3: CONTRIBUIDORES (si existen)
+    #                         PÁGINA 2: CONTRIBUIDORES (si existen)
     # ========================================================================================
     if contributors_df is not None and not contributors_df.empty:
         elements.append(PageBreak())
@@ -192,7 +186,7 @@ def generate_pdf_report(df, contributors_df, week, year, scrap_df=None, output_f
         
         # Preparar datos de contribuidores CON % ACUMULADO
         contrib_data = []
-        contrib_headers = ['Ranking', 'Part Number', 'Description', 'Quantity', 'Amount (USD)', '% Cumulative']
+        contrib_headers = ['Ranking', 'Part Number', 'Description', 'Quantity', 'Amount (USD)', '% Cumulative', 'Location']
         contrib_data.append(contrib_headers)
         
         for index, row in contributors_df.iterrows():
@@ -239,8 +233,8 @@ def generate_pdf_report(df, contributors_df, week, year, scrap_df=None, output_f
         # Pintar de rojo las filas hasta alcanzar el 80% acumulado
         for i in range(1, len(contrib_data) - 1):  # Excluir encabezado y total
             try:
-                # La columna % Acumulado es la última (índice -1)
-                cumulative_str = contrib_data[i][-1]
+                # La columna % Acumulado es la penultima
+                cumulative_str = contrib_data[i][-2]
                 # Quitar el símbolo % y convertir a float
                 cumulative = float(cumulative_str.replace('%', ''))
                 
@@ -262,7 +256,7 @@ def generate_pdf_report(df, contributors_df, week, year, scrap_df=None, output_f
             textColor=colors.grey,
             alignment=TA_RIGHT
         )
-        footer_text = "Generado automáticamente por Sistema de Análisis de Scrap Rate by Oscar Teran"
+        footer_text = "Generado automáticamente por Sistema de Análisis de Scrap desarrollado por Oscar Teran"
         footer = Paragraph(footer_text, footer_style)
         elements.append(footer)
     
@@ -272,10 +266,5 @@ def generate_pdf_report(df, contributors_df, week, year, scrap_df=None, output_f
     # Limpiar imágenes temporales
     if os.path.exists(chart1_path):
         os.remove(chart1_path)
-    try:
-        if os.path.exists(chart2_path):
-            os.remove(chart2_path)
-    except:
-        pass
     
     return filepath

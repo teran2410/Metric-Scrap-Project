@@ -11,8 +11,7 @@ import threading
 from src.data_processor import load_data, process_weekly_data
 from src.pdf_generator import generate_pdf_report
 from src.top_contributors import export_contributors_to_console
-from config import APP_TITLE, APP_WIDTH, APP_HEIGHT, APP_THEME, APP_COLOR_THEME
-
+from config import APP_TITLE, APP_WIDTH, APP_HEIGHT, APP_THEME, APP_COLOR_THEME, APP_ICON_PATH
 
 class ScrapRateApp(ctk.CTk):
     """Aplicación principal para análisis de Scrap Rate"""
@@ -27,6 +26,23 @@ class ScrapRateApp(ctk.CTk):
         # Configurar el tema
         ctk.set_appearance_mode(APP_THEME)
         ctk.set_default_color_theme(APP_COLOR_THEME)
+        
+        # Configurar ícono de la aplicación
+        if os.path.exists(APP_ICON_PATH):
+            try:
+                self.iconbitmap(APP_ICON_PATH)
+            except:
+                pass  # No hacer nada si falla (puede pasar en macOS/Linux)
+            
+        # Configurar ícono de la taskbar
+        if os.path.exists(APP_ICON_PATH):
+            try:
+                self.iconphoto(True, APP_ICON_PATH)
+            except:
+                pass  # No hacer nada si falla (puede pasar en macOS/Linux)
+            
+        # icon = ctk.PhotoImage(file="assets/icon.ico")  # También puedes usar .ico
+        # self.iconphoto(True, icon)
         
         # Obtener año y semana actual
         current_date = datetime.now()
@@ -45,7 +61,16 @@ class ScrapRateApp(ctk.CTk):
             text="Análisis de Scrap Rate",
             font=ctk.CTkFont(size=22, weight="bold")
         )
-        title_label.pack(pady=20)
+        title_label.pack(pady=(20, 5))
+        
+        # Subtitulo principal
+        title_label = ctk.CTkLabel(
+            self, 
+            text="Desarrollado por Oscar Teran",
+            font=ctk.CTkFont(size=12, weight="normal"),
+            text_color="gray"
+        )
+        title_label.pack(pady=(0, 10))
         
         # Crear TabView (pestañas)
         self.tabview = ctk.CTkTabview(self, width=360, height=320)
