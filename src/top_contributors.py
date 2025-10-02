@@ -70,6 +70,13 @@ def get_top_contributors(scrap_df, week_number, year, top_n=10):
     else:
         contributors['Cumulative %'] = 0.0
     
+    # Agregar columna de Ubicación (Location) si existe en el DataFrame original
+    if 'Location' in scrap_week.columns:
+        location_map = scrap_week.set_index('Item')['Location'].to_dict()
+        contributors['Location'] = contributors['Item'].map(location_map)
+    else:
+        contributors['Location'] = ''
+
     # Agregar columna de Lugar (1, 2, 3, etc.)
     contributors.insert(0, 'Lugar', range(1, len(contributors) + 1))
     
@@ -79,7 +86,8 @@ def get_top_contributors(scrap_df, week_number, year, top_n=10):
         'Description': 'Descripción',
         'Quantity': 'Cantidad Scrapeada',
         'Total Posted': 'Monto (dls)',
-        'Cumulative %': '% Acumulado'
+        'Cumulative %': '% Acumulado',
+        'Location': 'Ubicación'
     })
     
     # Agregar fila de totales al final (sin % acumulado en total)
@@ -89,7 +97,8 @@ def get_top_contributors(scrap_df, week_number, year, top_n=10):
         'Descripción': [''],
         'Cantidad Scrapeada': [contributors['Cantidad Scrapeada'].sum()],
         'Monto (dls)': [contributors['Monto (dls)'].sum()],
-        '% Acumulado': ['']
+        '% Acumulado': [''],
+        'Ubicación': ['']
     })
     
     contributors = pd.concat([contributors, total_row], ignore_index=True)
@@ -139,14 +148,6 @@ def format_contributors_output(df):
     
     # Crear nuevo DataFrame con los valores formateados
     formatted_df = pd.DataFrame(formatted_rows)
-    
-    # Imprimir reporte formateado
-    print("\n" + "="*120)
-    print("TOP CONTRIBUIDORES DE SCRAP (MAYOR MONTO EN DÓLARES)")
-    print("="*120)
-    print(formatted_df.to_string(index=False))
-    print("="*120 + "\n")
-
 
 def export_contributors_to_console(scrap_df, week, year, top_n=10):
     """
