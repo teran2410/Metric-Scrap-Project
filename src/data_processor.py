@@ -24,7 +24,6 @@ def load_data(file_path=DATA_FILE_PATH):
     except Exception as e:
         return None, None, None
 
-
 def process_weekly_data(scrap_df, ventas_df, horas_df, week_number, year):
     """
     Procesa los datos de una semana específica y calcula el rate de scrap

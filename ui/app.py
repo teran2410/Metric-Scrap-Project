@@ -7,8 +7,10 @@ import os
 
 from ui.weekly_tab import WeeklyTab
 from ui.future_tabs import CustomTab, MonthlyTab, QuarterlyTab, AnnualTab
-from config import APP_TITLE, APP_WIDTH, APP_HEIGHT, APP_THEME, APP_COLOR_THEME, APP_ICON_PATH
-
+from config import (
+    APP_TITLE, APP_WIDTH, APP_HEIGHT, 
+    APP_THEME, APP_COLOR_THEME, APP_ICON_PATH
+)
 
 class ScrapRateApp(ctk.CTk):
     """Aplicación principal para análisis de Scrap Rate"""

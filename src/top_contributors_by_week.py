@@ -6,7 +6,7 @@ import pandas as pd
 from colorama import Fore, Style
 
 
-def get_top_contributors(scrap_df, week_number, year, top_n=10):
+def get_top_contributors_by_week(scrap_df, week_number, year, top_n=10):
     """
     Obtiene los principales contribuidores de scrap para una semana específica
     IMPORTANTE: Devuelve los items con MAYOR monto total en dólares
@@ -159,5 +159,5 @@ def export_contributors_to_console(scrap_df, week, year, top_n=10):
         year (int): Año del reporte
         top_n (int): Número de principales contribuidores a mostrar
     """
-    contributors = get_top_contributors(scrap_df, week, year, top_n)
+    contributors = get_top_contributors_by_week(scrap_df, week, year, top_n)
     return contributors
