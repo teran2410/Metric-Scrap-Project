@@ -1,8 +1,8 @@
-"""
-Punto de entrada principal de la aplicación de Scrap Rate Analysis
-"""
+from ui.app import ScrapRateApp
 
-from ui.app import run_app
+def run_app():
+    app = ScrapRateApp()
+    app.mainloop()
 
 if __name__ == "__main__":
     run_app()

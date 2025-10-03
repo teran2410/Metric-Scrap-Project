@@ -1,5 +1,5 @@
 """
-Módulo para la generación de reportes en PDF
+pdf_generator.py - Módulo para la generación de reportes en PDF
 """
 
 from reportlab.lib import colors
