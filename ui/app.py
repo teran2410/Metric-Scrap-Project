@@ -5,8 +5,8 @@ app.py - Interfaz gráfica principal (modularizada)
 import customtkinter as ctk
 import os
 
-from ui.weekly_tab import WeeklyTab
-from ui.future_tabs import CustomTab, MonthlyTab, QuarterlyTab, AnnualTab
+from ui.tabs.weekly_tab import WeeklyTab
+from ui.tabs.future_tabs import CustomTab, MonthlyTab, QuarterlyTab, AnnualTab
 from config import (
     APP_TITLE, APP_WIDTH, APP_HEIGHT, 
     APP_THEME, APP_COLOR_THEME, APP_ICON_PATH

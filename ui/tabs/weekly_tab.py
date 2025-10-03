@@ -8,10 +8,11 @@ from datetime import datetime
 import os
 import threading
 
-from ui.base_tab import BaseTab
-from src.processors.data_processor import load_data, process_weekly_data
-from src.reports.pdf_weekly_generator import generate_weekly_pdf_report
-from src.analysis.top_contributors_by_week import export_contributors_to_console
+from ui.tabs.base_tab import BaseTab
+from src.processors.data_loader import load_data
+from src.processors.weekly_processor import process_weekly_data
+from src.reports.weekly_report import generate_weekly_pdf_report
+from src.analysis.weekly_contributors import export_contributors_to_console
 
 
 class WeeklyTab(BaseTab):

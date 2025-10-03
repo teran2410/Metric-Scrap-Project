@@ -2,7 +2,7 @@
 future_tabs.py - Pestañas futuras (Mensual, Trimestral, Anual)
 """
 
-from ui.base_tab import BaseTab
+from ui.tabs.base_tab import BaseTab
 
 class CustomTab(BaseTab):
     """Pestaña para reportes con fecha personalizada (en desarrollo)"""
