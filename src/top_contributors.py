@@ -95,7 +95,7 @@ def get_top_contributors(scrap_df, week_number, year, top_n=10):
         'Lugar': ['TOTAL'],
         'Número de Parte': [''],
         'Descripción': [''],
-        'Cantidad Scrapeada': [contributors['Cantidad Scrapeada'].sum()],
+        'Cantidad Scrapeada': [''],
         'Monto (dls)': [contributors['Monto (dls)'].sum()],
         '% Acumulado': [''],
         'Ubicación': ['']

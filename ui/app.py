@@ -6,7 +6,7 @@ import customtkinter as ctk
 import os
 
 from ui.weekly_tab import WeeklyTab
-from ui.future_tabs import MonthlyTab, QuarterlyTab, AnnualTab
+from ui.future_tabs import CustomTab, MonthlyTab, QuarterlyTab, AnnualTab
 from config import APP_TITLE, APP_WIDTH, APP_HEIGHT, APP_THEME, APP_COLOR_THEME, APP_ICON_PATH
 
 
@@ -19,6 +19,7 @@ class ScrapRateApp(ctk.CTk):
         # Configuración de la ventana
         self.title(APP_TITLE)
         self.geometry(f"{APP_WIDTH}x{APP_HEIGHT + 50}")
+        self.resizable(False, False) # Tamaño fijo
         
         # Configurar tema
         ctk.set_appearance_mode(APP_THEME)
@@ -58,7 +59,7 @@ class ScrapRateApp(ctk.CTk):
         subtitle_label = ctk.CTkLabel(
             self, 
             text="Desarrollado por Oscar Teran",
-            font=ctk.CTkFont(size=12, weight="normal"),
+            font=ctk.CTkFont(size=12, weight="normal", slant="italic"),
             text_color="gray"
         )
         subtitle_label.pack(pady=(0, 10))
@@ -72,6 +73,7 @@ class ScrapRateApp(ctk.CTk):
         self.tabview.add("Mensual")
         self.tabview.add("Trimestral")
         self.tabview.add("Anual")
+        self.tabview.add("Personalizado")
         
         # Crear contenido de cada pestaña
         self.create_tabs()
@@ -92,6 +94,9 @@ class ScrapRateApp(ctk.CTk):
         
         annual_frame = self.tabview.tab("Anual")
         self.annual_tab = AnnualTab(annual_frame)
+
+        custom_frame = self.tabview.tab("Personalizado")
+        self.custom_tab = CustomTab(custom_frame)
 
 
 def run_app():

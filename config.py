@@ -25,6 +25,7 @@ TARGET_RATES = {
 # RUTAS DE ARCHIVOS
 # ============================================
 DATA_FILE_PATH = 'data/test pandas.xlsx'
+# DATA_FILE_PATH = 'H:/Ingenieria/Ing. Procesos/Metricos FA/Metrico Scrap/2025/database.xlsx' # Ruta en red SI FUNCIONA
 SCRAP_SHEET_NAME = 'Scrap Database'
 VENTAS_SHEET_NAME = 'Ventas Database'
 HORAS_SHEET_NAME = 'Horas Database'
@@ -33,10 +34,10 @@ HORAS_SHEET_NAME = 'Horas Database'
 # CONFIGURACIÓN DE LA APLICACIÓN 
 # ============================================
 APP_TITLE = "Scrap Analyzer"
-APP_WIDTH = 400
+APP_WIDTH = 450
 APP_HEIGHT = 450
-APP_THEME = "dark"
-APP_COLOR_THEME = "blue"
+APP_THEME = "system" # "light", "dark", "system"
+APP_COLOR_THEME = "blue" # "blue", "green"
 APP_ICON_PATH = "assets/icon.ico"
 
 # ============================================

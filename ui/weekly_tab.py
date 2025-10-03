@@ -10,7 +10,7 @@ import threading
 
 from ui.base_tab import BaseTab
 from src.data_processor import load_data, process_weekly_data
-from src.pdf_generator import generate_pdf_report
+from src.services.weekly.pdf_weekly_generator import generate_weekly_pdf_report
 from src.top_contributors import export_contributors_to_console
 
 
@@ -66,8 +66,8 @@ class WeeklyTab(BaseTab):
             width=250,
             height=50,
             font=ctk.CTkFont(size=16, weight="bold"),
-            fg_color="#28a745",
-            hover_color="#218838"
+            fg_color="#2E8CFF",
+            hover_color="#0049A3"
         )
         self.pdf_button.pack(pady=20)
     
@@ -165,7 +165,7 @@ class WeeklyTab(BaseTab):
             
             week += 1  # Ajustar a 1-indexado para el reporte
             
-            filepath = generate_pdf_report(
+            filepath = generate_weekly_pdf_report(
                 result,
                 contributors,
                 week, 

@@ -22,7 +22,6 @@ def load_data(file_path=DATA_FILE_PATH):
         horas_df = pd.read_excel(file_path, sheet_name=HORAS_SHEET_NAME)
         return scrap_df, ventas_df, horas_df
     except Exception as e:
-        print(f"Error al cargar el archivo: {e}")
         return None, None, None
 
 
@@ -61,10 +60,6 @@ def process_weekly_data(scrap_df, ventas_df, horas_df, week_number, year):
     scrap_week = scrap_df[(scrap_df['Week'] == week_number) & (scrap_df['Year'] == year)]
     ventas_week = ventas_df[(ventas_df['Week'] == week_number) & (ventas_df['Year'] == year)]
     horas_week = horas_df[(horas_df['Week'] == week_number) & (horas_df['Year'] == year)]
-    
-    if scrap_week.empty and ventas_week.empty and horas_week.empty:
-        print(f"\nNo se encontraron datos para la semana {week_number} del año {year}")
-        return None
     
     # Agrupar por fecha
     scrap_daily = scrap_week.groupby('Create Date')['Total Posted'].sum()

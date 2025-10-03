@@ -1,5 +1,5 @@
 """
-pdf_generator.py - Módulo para la generación de reportes en PDF
+pdf_weekly_generator.py - Módulo para la generación de reportes en PDF
 """
 
 from reportlab.lib import colors
@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 from src.location_analysis import get_location_contributors
 
 
-def generate_pdf_report(df, contributors_df, week, year, scrap_df=None, output_folder='reports'):
+def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, output_folder='reports'):
     """
     Genera un PDF con el reporte de Scrap Rate y principales contribuidores
     
