@@ -9,9 +9,9 @@ import os
 import threading
 
 from ui.base_tab import BaseTab
-from src.data_processor import load_data, process_weekly_data
-from src.pdf_weekly_generator import generate_weekly_pdf_report
-from src.top_contributors_by_week import export_contributors_to_console
+from src.processors.data_processor import load_data, process_weekly_data
+from src.reports.pdf_weekly_generator import generate_weekly_pdf_report
+from src.analysis.top_contributors_by_week import export_contributors_to_console
 
 
 class WeeklyTab(BaseTab):
