@@ -179,12 +179,13 @@ class WeeklyTab(BaseTab):
                 self.progress_bar, self.status_label, self.pdf_button
             ))
             
+            # Mostrar mensaje de éxito o error
             if filepath:
                 folder_path = os.path.dirname(filepath)
                 
                 self.root_app.after(0, lambda: messagebox.showinfo(
-                    "PDF Generado",
-                    f"PDF generado exitosamente:\n\n{os.path.basename(filepath)}\n\nUbicación: {folder_path}"
+                    "Éxito",
+                    f"El archivo [{os.path.basename(filepath)}]\n\n se ha generado exitosamente."
                 ))
                 
                 # Abrir PDF
