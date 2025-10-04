@@ -45,7 +45,7 @@ def get_monthly_contributors(scrap_df, month, year, top_n=10):
     # AGRUPAR por Item y SUMAR todos los registros del mismo item
     contributors = scrap_month.groupby('Item', as_index=False).agg({
         'Description': 'first',
-        'Location': 'first',  # Agregar location
+        # 'Location': 'first',  # Agregar location
         'Quantity': 'sum',
         'Total Posted': 'sum'
     })
@@ -63,6 +63,13 @@ def get_monthly_contributors(scrap_df, month, year, top_n=10):
         contributors['Cumulative %'] = (contributors['Total Posted'].cumsum() / total_top_n * 100).round(2)
     else:
         contributors['Cumulative %'] = 0.0
+
+    # Agregar columna de Ubicación (Location) si existe en el DataFrame original
+    if 'Location' in scrap_month.columns:
+        location_map = scrap_month.set_index('Item')['Location'].to_dict()
+        contributors['Location'] = contributors['Item'].map(location_map)
+    else:
+        contributors['Location'] = ''
     
     # Agregar columna de Lugar
     contributors.insert(0, 'Lugar', range(1, len(contributors) + 1))
@@ -71,10 +78,10 @@ def get_monthly_contributors(scrap_df, month, year, top_n=10):
     contributors = contributors.rename(columns={
         'Item': 'Número de Parte',
         'Description': 'Descripción',
-        'Location': 'Celda',
         'Quantity': 'Cantidad Scrapeada',
         'Total Posted': 'Monto (dls)',
-        'Cumulative %': '% Acumulado'
+        'Cumulative %': '% Acumulado',
+        'Location': 'Ubicación'
     })
     
     # Agregar fila de totales
@@ -82,10 +89,10 @@ def get_monthly_contributors(scrap_df, month, year, top_n=10):
         'Lugar': ['TOTAL'],
         'Número de Parte': [''],
         'Descripción': [''],
-        'Celda': [''],
-        'Cantidad Scrapeada': [contributors['Cantidad Scrapeada'].sum()],
+        'Cantidad Scrapeada': [''],
         'Monto (dls)': [contributors['Monto (dls)'].sum()],
-        '% Acumulado': ['']
+        '% Acumulado': [''],
+        'Ubicación': [''],
     })
     
     contributors = pd.concat([contributors, total_row], ignore_index=True)

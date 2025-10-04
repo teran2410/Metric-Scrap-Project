@@ -87,8 +87,8 @@ def process_monthly_data(scrap_df, ventas_df, horas_df, month, year):
     # Agregar fila de totales
     total_row = pd.DataFrame({
         'Week': ['TOTAL'],
-        'Month': [month],
-        'Year': [year],
+        'Month': [''],
+        'Year': [''],
         'Scrap': [total_scrap],
         'Hrs Prod.': [total_horas],
         'Rate': [total_rate],

@@ -16,7 +16,6 @@ import os
 import matplotlib
 matplotlib.use("Agg")  # usar backend no interactivo
 import matplotlib.pyplot as plt
-from src.analysis.location_analysis import get_location_contributors
 
 
 def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, output_folder='reports'):
@@ -80,7 +79,7 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
     )
     
     # Título
-    title = Paragraph("REPORTE SEMANAL DE SCRAP RATE", title_style)
+    title = Paragraph("REPORTE SEMANAL DEL METRICO DE SCRAP", title_style)
     elements.append(title)
     
     # Subtítulo con información de semana y año
@@ -93,7 +92,7 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
     #                         PRIMERA TABLA: REPORTE SEMANAL
     # ========================================================================================
     data = []
-    headers = ['Day', 'D', 'W', 'M', 'Scrap', 'Hrs Prod.', 'Venta (dls)', 'Rate', 'Target Rate']
+    headers = ['Día', 'N° Día', 'Semana', 'Mes', 'Scrap', 'Hrs Prod.', 'Venta (dls)', 'Rate', 'Target Rate']
     data.append(headers)
     
     for index, row in df.iterrows():
@@ -114,7 +113,7 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
     
     table = Table(data, repeatRows=1)
     table_style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1f77b4')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FF6B35')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
@@ -143,7 +142,7 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
     target = df['Target Rate'].iloc[0] if 'Target Rate' in df.columns else 0.0
     
     fig, ax1 = plt.subplots(figsize=(8, 3))
-    bars = ax1.bar(days, rates, color='green')
+    bars = ax1.bar(days, rates, color='#FF6B35')
     
     # Resaltar si pasa el target
     for bar, rate in zip(bars, rates):

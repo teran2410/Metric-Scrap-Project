@@ -16,8 +16,6 @@ import os
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from src.analysis.location_analysis import get_location_contributors
-
 
 # Diccionario de meses
 MONTHS_ES = {
@@ -88,11 +86,11 @@ def generate_monthly_pdf_report(df, contributors_df, month, year, scrap_df=None,
     )
     
     # Título
-    title = Paragraph("REPORTE MENSUAL DE SCRAP RATE", title_style)
+    title = Paragraph("REPORTE MENSUAL DEL METRICO DE SCRAP", title_style)
     elements.append(title)
     
     # Subtítulo
-    subtitle_text = f"{month_name} {year} | Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+    subtitle_text = f"{month_name} de {year} | Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
     subtitle = Paragraph(subtitle_text, subtitle_style)
     elements.append(subtitle)
     elements.append(Spacer(1, 0.3*inch))
@@ -190,7 +188,7 @@ def generate_monthly_pdf_report(df, contributors_df, month, year, scrap_df=None,
             alignment=TA_CENTER,
             fontName='Helvetica-Bold'
         )
-        contributors_title = Paragraph("TOP CONTRIBUIDORES DE SCRAP DEL MES", contributors_title_style)
+        contributors_title = Paragraph("TOP CONTRIBUIDORES DE SCRAP", contributors_title_style)
         elements.append(contributors_title)
         elements.append(Spacer(1, 0.3*inch))
         

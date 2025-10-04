@@ -105,50 +105,6 @@ def get_top_contributors_by_week(scrap_df, week_number, year, top_n=10):
     
     return contributors
 
-
-def format_contributors_output(df):
-    """
-    Formatea el DataFrame de contribuidores para visualización en consola
-    
-    Args:
-        df (DataFrame): DataFrame con los principales contribuidores
-    """
-    if df is None:
-        return
-    
-    # Crear copia para formatear
-    output = df.copy()
-    
-    # Formatear columnas numéricas
-    formatted_rows = []
-    
-    for index, row in output.iterrows():
-        formatted_row = {}
-        
-        for col in output.columns:
-            value = row[col]
-            
-            if col == 'Cantidad Scrapeada':
-                formatted_row[col] = f"{value:,.2f}" if isinstance(value, (int, float)) else value
-            elif col == 'Monto (dls)':
-                if isinstance(value, (int, float)):
-                    # Colorear en rojo los montos más altos
-                    formatted_row[col] = f"{Fore.RED}${value:,.2f}{Style.RESET_ALL}"
-                else:
-                    formatted_row[col] = value
-            elif col == '% Acumulado':
-                if isinstance(value, (int, float)):
-                    formatted_row[col] = f"{value:.2f}%"
-                else:
-                    formatted_row[col] = value
-            else:
-                formatted_row[col] = value if value != '' else ''
-        
-        formatted_rows.append(formatted_row)
-    
-    # Crear nuevo DataFrame con los valores formateados
-    formatted_df = pd.DataFrame(formatted_rows)
-
 def export_contributors_to_console(scrap_df, week, year, top_n=10):
     """
     Exporta el reporte de contribuidores (sin imprimir en consola)
