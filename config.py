@@ -24,7 +24,8 @@ TARGET_RATES = {
 # ============================================
 # RUTAS DE ARCHIVOS
 # ============================================
-DATA_FILE_PATH = 'H:/Ingenieria/Ing. Procesos/Metricos FA/Metrico Scrap/2025/database.xlsx' # Ruta en red SI FUNCIONA
+DATA_FILE_PATH = 'data/test pandas.xlsx'  # Ruta local
+# DATA_FILE_PATH = 'H:/Ingenieria/Ing. Procesos/Metricos FA/Metrico Scrap/2025/database.xlsx' # Ruta en red SI FUNCIONA
 SCRAP_SHEET_NAME = 'Scrap Database'
 VENTAS_SHEET_NAME = 'Ventas Database'
 HORAS_SHEET_NAME = 'Horas Database'

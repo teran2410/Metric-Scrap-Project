@@ -1,0 +1,110 @@
+"""
+monthly_contributors.py - Análisis de contribuidores mensuales de scrap
+"""
+
+import pandas as pd
+
+
+def get_monthly_contributors(scrap_df, month, year, top_n=10):
+    """
+    Obtiene los principales contribuidores de scrap para un mes específico
+    
+    Args:
+        scrap_df (DataFrame): DataFrame con datos de scrap
+        month (int): Número de mes a procesar (1-12)
+        year (int): Año a procesar
+        top_n (int): Número de principales contribuidores a mostrar
+        
+    Returns:
+        DataFrame: DataFrame con los principales contribuidores o None si no hay datos
+    """
+    
+    # Hacer una copia para no modificar el original
+    scrap_df = scrap_df.copy()
+    
+    # Convertir columnas de fecha a datetime
+    scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'])
+    
+    # Agregar columnas de mes y año
+    scrap_df['Month'] = scrap_df['Create Date'].dt.month
+    scrap_df['Year'] = scrap_df['Create Date'].dt.year
+    
+    # Filtrar por mes específico
+    scrap_month = scrap_df[(scrap_df['Month'] == month) & (scrap_df['Year'] == year)]
+    
+    if scrap_month.empty:
+        return None
+    
+    # Hacer copia para modificar
+    scrap_month = scrap_month.copy()
+    
+    # Convertir a valores positivos
+    scrap_month['Quantity'] = scrap_month['Quantity'].abs()
+    scrap_month['Total Posted'] = scrap_month['Total Posted'].abs()
+    
+    # AGRUPAR por Item y SUMAR todos los registros del mismo item
+    contributors = scrap_month.groupby('Item', as_index=False).agg({
+        'Description': 'first',
+        'Location': 'first',  # Agregar location
+        'Quantity': 'sum',
+        'Total Posted': 'sum'
+    })
+    
+    # ORDENAR por monto total de MAYOR a MENOR
+    contributors = contributors.sort_values('Total Posted', ascending=False)
+    contributors = contributors.reset_index(drop=True)
+    
+    # Tomar solo los top N
+    contributors = contributors.head(top_n)
+    
+    # CALCULAR PORCENTAJE ACUMULADO basado en el TOTAL de los TOP N
+    total_top_n = contributors['Total Posted'].sum()
+    if total_top_n > 0:
+        contributors['Cumulative %'] = (contributors['Total Posted'].cumsum() / total_top_n * 100).round(2)
+    else:
+        contributors['Cumulative %'] = 0.0
+    
+    # Agregar columna de Lugar
+    contributors.insert(0, 'Lugar', range(1, len(contributors) + 1))
+    
+    # Renombrar columnas para el reporte
+    contributors = contributors.rename(columns={
+        'Item': 'Número de Parte',
+        'Description': 'Descripción',
+        'Location': 'Celda',
+        'Quantity': 'Cantidad Scrapeada',
+        'Total Posted': 'Monto (dls)',
+        'Cumulative %': '% Acumulado'
+    })
+    
+    # Agregar fila de totales
+    total_row = pd.DataFrame({
+        'Lugar': ['TOTAL'],
+        'Número de Parte': [''],
+        'Descripción': [''],
+        'Celda': [''],
+        'Cantidad Scrapeada': [contributors['Cantidad Scrapeada'].sum()],
+        'Monto (dls)': [contributors['Monto (dls)'].sum()],
+        '% Acumulado': ['']
+    })
+    
+    contributors = pd.concat([contributors, total_row], ignore_index=True)
+    
+    return contributors
+
+
+def export_monthly_contributors_to_console(scrap_df, month, year, top_n=10):
+    """
+    Obtiene el reporte de contribuidores mensuales
+    
+    Args:
+        scrap_df (DataFrame): DataFrame con datos de scrap
+        month (int): Número de mes
+        year (int): Año del reporte
+        top_n (int): Número de principales contribuidores a mostrar
+        
+    Returns:
+        DataFrame: DataFrame con los contribuidores
+    """
+    contributors = get_monthly_contributors(scrap_df, month, year, top_n)
+    return contributors

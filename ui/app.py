@@ -6,7 +6,9 @@ import customtkinter as ctk
 import os
 
 from ui.tabs.weekly_tab import WeeklyTab
-from ui.tabs.future_tabs import CustomTab, MonthlyTab, QuarterlyTab, AnnualTab
+from ui.tabs.monthly_tab import MonthlyTab
+from ui.tabs.future_tabs import CustomTab, QuarterlyTab, AnnualTab
+
 from config import (
     APP_TITLE, APP_WIDTH, APP_HEIGHT, 
     APP_THEME, APP_COLOR_THEME, APP_ICON_PATH
@@ -69,6 +71,12 @@ class ScrapRateApp(ctk.CTk):
         # TabView (pestañas)
         self.tabview = ctk.CTkTabview(self, width=360, height=320)
         self.tabview.pack(pady=10, padx=40)
+
+        # Configurar colores de pestañas
+        self.tabview.configure(
+            segmented_button_selected_color="#FF6B2C",  # Fondo de pestaña activa
+            segmented_button_selected_hover_color="#FF884D",  # Color al pasar el mouse
+        )
         
         # Agregar pestañas
         self.tabview.add("Semanal")
@@ -89,7 +97,7 @@ class ScrapRateApp(ctk.CTk):
         
         # Pestañas futuras (en desarrollo)
         monthly_frame = self.tabview.tab("Mensual")
-        self.monthly_tab = MonthlyTab(monthly_frame)
+        self.monthly_tab = MonthlyTab(monthly_frame, self)
         
         quarterly_frame = self.tabview.tab("Trimestral")
         self.quarterly_tab = QuarterlyTab(quarterly_frame)
