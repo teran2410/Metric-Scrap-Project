@@ -256,7 +256,7 @@ def generate_quarterly_pdf_report(df, contributors_df, quarter, year, scrap_df=N
             textColor=colors.grey,
             alignment=TA_RIGHT
         )
-        footer_text = "Generado automáticamente por Sistema de Análisis de Scrap desarrollado por Oscar Teran"
+        footer_text = "Reporte generado automáticamente por Metric Scrap System – © 2025 Oscar Teran"
         footer = Paragraph(footer_text, footer_style)
         elements.append(footer)
     

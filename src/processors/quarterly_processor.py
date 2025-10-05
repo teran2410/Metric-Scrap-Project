@@ -94,8 +94,8 @@ def process_quarterly_data(scrap_df, ventas_df, horas_df, quarter, year):
     # Agregar fila de totales
     total_row = pd.DataFrame({
         'Month': ['TOTAL'],
-        'Quarter': [quarter],
-        'Year': [year],
+        'Quarter': [''],
+        'Year': [''],
         'Scrap': [total_scrap],
         'Hrs Prod.': [total_horas],
         'Rate': [total_rate],

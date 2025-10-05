@@ -1,5 +1,5 @@
 """
-pdf_weekly_generator.py - Módulo para la generación de reportes en PDF
+pdf_weekly_generator.py - Módulo para la generación de reportes en PDF (versión mejorada visualmente)
 """
 
 from reportlab.lib import colors
@@ -14,37 +14,25 @@ from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 from datetime import datetime
 import os
 import matplotlib
-matplotlib.use("Agg")  # usar backend no interactivo
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
 def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, output_folder='reports'):
     """
     Genera un PDF con el reporte de Scrap Rate y principales contribuidores
-    
-    Args:
-        df (DataFrame): DataFrame con los datos del reporte semanal
-        contributors_df (DataFrame): DataFrame con los principales contribuidores
-        week (int): Número de semana
-        year (int): Año del reporte
-        scrap_df (DataFrame): DataFrame original con datos de scrap (para análisis de locations)
-        output_folder (str): Carpeta donde se guardará el PDF
-        
-    Returns:
-        str: Ruta del archivo PDF generado
     """
     if df is None:
         return None
-    
-    # Crear carpeta de reportes si no existe
+
+    # Crear carpeta si no existe
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
-    
-    # Nombre del archivo 
+
     filename = f"Scrap_Rate_W{week}_{year}.pdf"
     filepath = os.path.join(output_folder, filename)
-    
-    # Crear el documento PDF
+
+    # Crear documento
     doc = SimpleDocTemplate(
         filepath,
         pagesize=landscape(letter),
@@ -53,120 +41,130 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
         topMargin=30,
         bottomMargin=30
     )
-    
-    # Contenedor para los elementos del PDF
+
     elements = []
-    
-    # Estilos
+
+    # ==============================
+    # Estilos globales del documento
+    # ==============================
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
         fontSize=24,
-        textColor=colors.black,
+        textColor=colors.HexColor("#1E3A8A"),
         spaceAfter=10,
         alignment=TA_CENTER,
         fontName='Helvetica-Bold'
     )
-    
+
     subtitle_style = ParagraphStyle(
         'CustomSubtitle',
         parent=styles['Normal'],
-        fontSize=12,
-        textColor=colors.grey,
+        fontSize=11,
+        textColor=colors.HexColor("#6B7280"),
         spaceAfter=10,
         alignment=TA_CENTER
     )
-    
-    # Título
-    title = Paragraph("REPORTE SEMANAL DEL METRICO DE SCRAP", title_style)
+
+    # ==============================
+    # Encabezado principal
+    # ==============================
+    title = Paragraph("REPORTE SEMANAL DEL MÉTRICO DE SCRAP", title_style)
     elements.append(title)
-    
-    # Subtítulo con información de semana y año
+
     subtitle_text = f"Semana {week} | Año {year} | Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
     subtitle = Paragraph(subtitle_text, subtitle_style)
     elements.append(subtitle)
-    elements.append(Spacer(1, 0.3*inch))
-    
+    elements.append(Spacer(1, 0.3 * inch))
+
     # ========================================================================================
-    #                         PRIMERA TABLA: REPORTE SEMANAL
+    # PRIMERA TABLA: REPORTE SEMANAL
     # ========================================================================================
     data = []
     headers = ['Día', 'N° Día', 'Semana', 'Mes', 'Scrap', 'Hrs Prod.', 'Venta (dls)', 'Rate', 'Target Rate']
     data.append(headers)
-    
+
     for index, row in df.iterrows():
         row_data = []
         for col in df.columns:
             value = row[col]
             if col == 'Scrap':
                 row_data.append(f"${value:,.2f}" if isinstance(value, (int, float)) else str(value))
-            elif col == 'Hrs Prod.':
-                row_data.append(f"{value:.2f}" if isinstance(value, (int, float)) else str(value))
-            elif col == 'Rate' or col == 'Target Rate':
+            elif col in ['Hrs Prod.', 'Rate', 'Target Rate']:
                 row_data.append(f"{value:.2f}" if isinstance(value, (int, float)) else str(value))
             elif col == '$ Venta (dls)':
                 row_data.append(f"${value:,.0f}" if isinstance(value, (int, float)) else str(value))
             else:
                 row_data.append(str(value) if value != '' else '')
         data.append(row_data)
-    
+
     table = Table(data, repeatRows=1)
     table_style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FF6B35')),
+        # Encabezado
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#3B82F6")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 10),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -2), colors.beige),
+
+        # Cuerpo
+        ('BACKGROUND', (0, 1), (-1, -2), colors.HexColor("#F3F4F6")),
         ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
         ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
         ('FONTSIZE', (0, 1), (-1, -1), 9),
-        ('GRID', (0, 0), (-1, -2), 1, colors.grey),
-        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#d9d9d9')),
+
+        # Fila total
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#E5E7EB")),
         ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
         ('FONTSIZE', (0, -1), (-1, -1), 10),
-        ('LINEABOVE', (0, -1), (-1, -1), 2, colors.black),
-        ('TOPPADDING', (0, 1), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor("#1E40AF")),
+
+        # Bordes
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#9CA3AF")),
+        ('TOPPADDING', (0, 1), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
     ])
     table.setStyle(table_style)
     elements.append(table)
-    
-    # --- GRÁFICA 1: SCRAP RATE POR DÍA ---
-    days = df['Day'][:-1]  # Excluir fila de totales
+
+    # ========================================================================================
+    # GRÁFICA: SCRAP RATE POR DÍA
+    # ========================================================================================
+    days = df['Day'][:-1]
     rates = df['Rate'][:-1]
     target = df['Target Rate'].iloc[0] if 'Target Rate' in df.columns else 0.0
-    
-    fig, ax1 = plt.subplots(figsize=(8, 3))
-    bars = ax1.bar(days, rates, color='#FF6B35')
-    
-    # Resaltar si pasa el target
+
+    fig, ax = plt.subplots(figsize=(8, 3))
+    bars = ax.bar(days, rates, color="#3B82F6", edgecolor="#1E40AF", linewidth=0.8)
+
+    # Resaltar valores sobre el target
     for bar, rate in zip(bars, rates):
-        if rate > target:
-            bar.set_color('grey')
-        ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height(),
-                 f"{rate:.2f}", ha='center', va='bottom', fontsize=9, fontweight='bold')
-    
-    ax1.axhline(y=target, color='red', linewidth=2)
-    ax1.set_ylabel("Rate")
+        color = "#EF4444" if rate > target else "#3B82F6"
+        bar.set_color(color)
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.1,
+                f"{rate:.2f}", ha='center', va='bottom', fontsize=9, fontweight='bold', color="#374151")
+
+    # Línea de objetivo
+    ax.axhline(y=target, color="#DC2626", linewidth=1.8, linestyle="--", label=f"Target ({target:.2f})")
+    ax.set_ylabel("Rate", fontsize=10, fontweight="bold")
+    ax.set_xlabel("Días", fontsize=10, fontweight="bold")
+    ax.legend(frameon=False, fontsize=9)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
     plt.tight_layout()
-    
-    # Guardar imagen temporal 1
+
     chart1_path = os.path.join(output_folder, "temp_chart_rates.png")
-    plt.savefig(chart1_path, dpi=100)
+    plt.savefig(chart1_path, dpi=120)
     plt.close()
-    
-    # Insertar primera gráfica en PDF
-    img1 = Image(chart1_path, width=7*inch, height=2.5*inch)
+
+    img1 = Image(chart1_path, width=7 * inch, height=2.5 * inch)
+    elements.append(Spacer(1, 0.3 * inch))
     elements.append(img1)
-    elements.append(Spacer(1, 0.3*inch))
-    
+
     # ========================================================================================
-    #                         PÁGINA 2: CONTRIBUIDORES (si existen)
+    # PÁGINA 2: CONTRIBUIDORES (si existen)
     # ========================================================================================
     if contributors_df is not None and not contributors_df.empty:
         elements.append(PageBreak())
@@ -174,20 +172,19 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
             'ContributorsTitle',
             parent=styles['Heading2'],
             fontSize=18,
-            textColor=colors.black,
+            textColor=colors.HexColor("#1E3A8A"),
             spaceAfter=15,
             alignment=TA_CENTER,
             fontName='Helvetica-Bold'
         )
         contributors_title = Paragraph("TOP CONTRIBUIDORES DE SCRAP", contributors_title_style)
         elements.append(contributors_title)
-        elements.append(Spacer(1, 0.3*inch))
-        
-        # Preparar datos de contribuidores CON % ACUMULADO
+        elements.append(Spacer(1, 0.3 * inch))
+
         contrib_data = []
         contrib_headers = ['Ranking', 'Part Number', 'Description', 'Quantity', 'Amount (USD)', '% Cumulative', 'Location']
         contrib_data.append(contrib_headers)
-        
+
         for index, row in contributors_df.iterrows():
             row_data = []
             for col in contributors_df.columns:
@@ -197,73 +194,51 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
                 elif col == 'Monto (dls)':
                     row_data.append(f"${value:,.2f}" if isinstance(value, (int, float)) else str(value))
                 elif col == '% Acumulado':
-                    if isinstance(value, (int, float)):
-                        row_data.append(f"{value:.2f}%")
-                    else:
-                        row_data.append(str(value))
+                    row_data.append(f"{value:.2f}%" if isinstance(value, (int, float)) else str(value))
                 else:
-                    row_data.append(str(value) if value != '' else '')
+                    row_data.append(str(value))
             contrib_data.append(row_data)
-        
+
         contrib_table = Table(contrib_data, repeatRows=1)
-        contrib_table_style = TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#d62728')),
+        contrib_style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 10),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -2), colors.beige),
-            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 9),
-            ('GRID', (0, 0), (-1, -2), 1, colors.grey),
-            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#d9d9d9')),
-            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, -1), (-1, -1), 10),
-            ('LINEABOVE', (0, -1), (-1, -1), 2, colors.black),
-            ('TOPPADDING', (0, 1), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
-            ('LEFTPADDING', (0, 0), (-1, -1), 6),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-            ('ALIGN', (2, 1), (2, -1), 'LEFT'),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor("#F9FAFB")),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#9CA3AF")),
         ])
-        
-        # Pintar de rojo las filas hasta alcanzar el 80% acumulado
-        for i in range(1, len(contrib_data) - 1):  # Excluir encabezado y total
+
+        # Resaltar filas hasta 80%
+        for i in range(1, len(contrib_data)):
             try:
-                # La columna % Acumulado es la penultima
-                cumulative_str = contrib_data[i][-2]
-                # Quitar el símbolo % y convertir a float
-                cumulative = float(cumulative_str.replace('%', ''))
-                
+                cumulative = float(contrib_data[i][-2].replace('%', ''))
                 if cumulative <= 80.0:
-                    # Pintar toda la fila de rojo claro hasta el 80%
-                    contrib_table_style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor('#ffcccc'))
-            except (ValueError, IndexError):
+                    contrib_style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor("#DBEAFE"))
+            except Exception:
                 pass
-        
-        contrib_table.setStyle(contrib_table_style)
+
+        contrib_table.setStyle(contrib_style)
         elements.append(contrib_table)
-        
+
         # Footer
-        elements.append(Spacer(1, 0.3*inch))
+        elements.append(Spacer(1, 0.4 * inch))
         footer_style = ParagraphStyle(
             'Footer',
             parent=styles['Normal'],
             fontSize=8,
-            textColor=colors.grey,
+            textColor=colors.HexColor("#6B7280"),
             alignment=TA_RIGHT
         )
-        footer_text = "Generado automáticamente por Sistema de Análisis de Scrap desarrollado por Oscar Teran"
-        footer = Paragraph(footer_text, footer_style)
-        elements.append(footer)
-    
-    # Construir PDF
+        footer_text = "Reporte generado automáticamente por Metric Scrap System – © 2025 Oscar Teran"
+        elements.append(Paragraph(footer_text, footer_style))
+
+    # Construcción final del PDF
     doc.build(elements)
-    
-    # Limpiar imágenes temporales
+
     if os.path.exists(chart1_path):
         os.remove(chart1_path)
-    
+
     return filepath
