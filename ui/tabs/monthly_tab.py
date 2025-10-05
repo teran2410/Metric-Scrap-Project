@@ -84,8 +84,8 @@ class MonthlyTab(BaseTab):
             width=250,
             height=50,
             font=ctk.CTkFont(size=16, weight="bold"),
-            fg_color="#FF6B35",
-            hover_color="#C44B27"
+            fg_color="#2F6690",
+            hover_color="#9DB4C0"
         )
         self.pdf_button.pack(pady=20)
     

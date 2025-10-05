@@ -14,7 +14,7 @@ from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 from datetime import datetime
 import os
 import matplotlib
-matplotlib.use("Agg")
+matplotlib.use("Agg") # Usar backend no interactivo
 import matplotlib.pyplot as plt
 
 # ============================================
@@ -31,11 +31,19 @@ COLOR_BG_CONTRIB = '#E1ECF4'   # Azul muy claro para contribuidores
 
 # Diccionario de meses
 MONTHS_ES = {
-    1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
-    5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
-    9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
+    1: "Enero",
+    2: "Febrero",
+    3: "Marzo",
+    4: "Abril",
+    5: "Mayo",
+    6: "Junio",
+    7: "Julio",
+    8: "Agosto",
+    9: "Septiembre",
+    10: "Octubre",
+    11: "Noviembre",
+    12: "Diciembre"
 }
-
 
 def generate_monthly_pdf_report(df, contributors_df, month, year, scrap_df=None, output_folder='reports'):
     """
@@ -236,6 +244,7 @@ def generate_monthly_pdf_report(df, contributors_df, month, year, scrap_df=None,
         contrib_table.setStyle(contrib_table_style)
         elements.append(contrib_table)
 
+        # Footer
         elements.append(Spacer(1, 0.3 * inch))
         footer_style = ParagraphStyle(
             'Footer',
@@ -244,7 +253,7 @@ def generate_monthly_pdf_report(df, contributors_df, month, year, scrap_df=None,
             textColor=colors.grey,
             alignment=TA_RIGHT
         )
-        footer_text = "Generado automáticamente por Sistema de Análisis de Scrap desarrollado por Oscar Teran"
+        footer_text = "Reporte generado automáticamente por Metric Scrap System – © 2025 Oscar Teran"
         elements.append(Paragraph(footer_text, footer_style))
 
     # Construir PDF

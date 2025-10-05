@@ -12,7 +12,7 @@ from ui.tabs.base_tab import BaseTab
 from src.processors.data_loader import load_data
 from src.processors.quarterly_processor import process_quarterly_data
 from src.pdf_quarterly_generator import generate_quarterly_pdf_report
-from src.analysis.quarterly_comtributors import export_quarterly_contributors_to_console
+from src.analysis.quarterly_contributors import export_quarterly_contributors_to_console
 
 class QuarterlyTab(BaseTab):
     """Pestaña para generación de reportes trimestrales"""
@@ -62,8 +62,8 @@ class QuarterlyTab(BaseTab):
             width=250,
             height=50,
             font=ctk.CTkFont(size=16, weight="bold"),
-            fg_color="#4CAF50",
-            hover_color="#388E3C"
+            fg_color="#2F6690",
+            hover_color="#9DB4C0"
         )
         self.pdf_button.pack(pady=20)
     

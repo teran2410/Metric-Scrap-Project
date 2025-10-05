@@ -76,8 +76,8 @@ class ScrapRateApp(ctk.CTk):
 
         # Configurar colores de pestañas
         self.tabview.configure(
-            segmented_button_selected_color="#FF6B2C",  # Fondo de pestaña activa
-            segmented_button_selected_hover_color="#FF884D",  # Color al pasar el mouse
+            segmented_button_selected_color="#2F6690",  # Fondo de pestaña activa
+            segmented_button_selected_hover_color="#9DB4C0",  # Color al pasar el mouse
         )
         
         # Agregar pestañas

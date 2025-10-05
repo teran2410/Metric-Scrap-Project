@@ -35,7 +35,7 @@ class WeeklyTab(BaseTab):
         # Selector de año
         self.year_combobox = self.create_year_selector(command=self.on_year_change)
         
-        # Selector de semana
+        # Campo de entrada de semana (reemplaza al combobox)
         week_label = ctk.CTkLabel(
             self.frame,
             text="Semana:",
@@ -43,17 +43,13 @@ class WeeklyTab(BaseTab):
         )
         week_label.pack(pady=(15, 5))
         
-        self.week_combobox = ctk.CTkComboBox(
+        self.week_entry = ctk.CTkEntry(
             self.frame,
-            values=[],
             width=200,
             justify="center",
-            state="readonly"
+            placeholder_text="Ingrese la semana (1-53)"
         )
-        self.week_combobox.pack(pady=5)
-        
-        # Actualizar semanas disponibles
-        self.update_weeks_for_year(self.current_year)
+        self.week_entry.pack(pady=5)
         
         # Barra de progreso
         self.progress_bar, self.status_label = self.create_progress_bar()
@@ -66,35 +62,15 @@ class WeeklyTab(BaseTab):
             width=250,
             height=50,
             font=ctk.CTkFont(size=16, weight="bold"),
-            fg_color="#FF6B35",
-            hover_color="#C44B27"
+            fg_color="#2F6690",
+            hover_color="#9DB4C0"
         )
         self.pdf_button.pack(pady=20)
     
     def on_year_change(self, selected_year):
         """Callback cuando cambia el año seleccionado"""
-        self.update_weeks_for_year(int(selected_year))
-    
-    def update_weeks_for_year(self, year):
-        """Actualiza las semanas disponibles según el año"""
-        current_date = datetime.now()
-        current_year = current_date.year
-        current_week = int(current_date.strftime('%U'))
-        
-        if year < current_year:
-            max_week = 53
-        elif year == current_year:
-            max_week = current_week
-        else:
-            max_week = 0
-        
-        weeks_list = [str(week) for week in range(1, max_week + 1)]
-        self.week_combobox.configure(values=weeks_list)
-        
-        if weeks_list:
-            self.week_combobox.set(str(max_week))
-        else:
-            self.week_combobox.set("")
+        # Ya no se requiere actualizar semanas, pero mantenemos el método por compatibilidad
+        pass
     
     def start_pdf_generation(self):
         """Inicia la generación del PDF en un hilo separado"""
@@ -106,22 +82,43 @@ class WeeklyTab(BaseTab):
         try:
             # Obtener valores
             year = int(self.year_combobox.get())
-            week_str = self.week_combobox.get()
+            week_str = self.week_entry.get().strip()
             
+            # Validar entrada vacía
             if not week_str:
-                self.root_app.after(0, lambda: messagebox.showerror("Error", "Seleccione una semana válida"))
+                self.root_app.after(0, lambda: messagebox.showerror("Error", "Ingrese una semana válida"))
                 return
             
-            week = int(week_str) - 1  # Ajustar a 0-indexado
+            # Validar que sea numérica
+            if not week_str.isdigit():
+                self.root_app.after(0, lambda: messagebox.showerror("Error", "La semana debe ser un número"))
+                return
             
-            # Validaciones
-            if week < 0 or week > 52:
+            week = int(week_str)
+            
+            # Validaciones de rango
+            if week < 1 or week > 53:
                 self.root_app.after(0, lambda: messagebox.showerror("Error", "La semana debe estar entre 1 y 53"))
+                return
+            
+            # Validar que la semana no sea mayor a la actual (si el año es el actual)
+            current_date = datetime.now()
+            current_week = int(current_date.strftime('%U'))
+            current_year = current_date.year
+            
+            if year == current_year and week > current_week:
+                self.root_app.after(0, lambda: messagebox.showerror(
+                    "Error", 
+                    "No se pueden generar reportes de semanas que aún no transcurren"
+                ))
                 return
             
             if year < 2000 or year > 2100:
                 self.root_app.after(0, lambda: messagebox.showerror("Error", "Ingrese un año válido"))
                 return
+            
+            # Ajustar semana a 0-indexado
+            week -= 1
             
             # Paso 1: Cargar datos
             self.root_app.after(0, lambda: self.show_progress(

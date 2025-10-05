@@ -81,26 +81,26 @@ def process_quarterly_data(scrap_df, ventas_df, horas_df, quarter, year):
         axis=1
     )
     
-    # Agregar Target Rate promedio del trimestre
-    avg_target = sum(TARGET_RATES.get(m, 0.60) for m in months) / len(months)
-    result['Target Rate'] = avg_target
-    
-    # Calcular totales
+    # Agregar Target Rate del último mes del trimestre
+    last_month = months[-1]  # último mes del trimestre (por ejemplo, 6 para Q2)
+    target_last = TARGET_RATES.get(last_month, 0.60)
+    result['Target Rate'] = target_last
+
+    # Calcular totales (sin rate en la fila total)
     total_scrap = result['Scrap'].sum()
     total_horas = result['Hrs Prod.'].sum()
     total_ventas = result['$ Venta (dls)'].sum()
-    total_rate = total_scrap / total_horas if total_horas > 0 else 0
     
-    # Agregar fila de totales
+    # Agregar fila de totales (sin Rate ni Target Rate)
     total_row = pd.DataFrame({
         'Month': ['TOTAL'],
         'Quarter': [''],
         'Year': [''],
         'Scrap': [total_scrap],
         'Hrs Prod.': [total_horas],
-        'Rate': [total_rate],
-        'Target Rate': [avg_target],
-        '$ Venta (dls)': [total_ventas]
+        '$ Venta (dls)': [total_ventas],
+        'Rate': [''],
+        'Target Rate': ['']
     })
     
     result = pd.concat([result, total_row], ignore_index=True)

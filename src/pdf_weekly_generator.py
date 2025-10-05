@@ -1,5 +1,5 @@
 """
-pdf_weekly_generator.py - Módulo para la generación de reportes en PDF (versión mejorada visualmente)
+pdf_weekly_generator.py - Módulo para la generación de reportes en PDF (versión mejorada visualmente con paleta fría)
 """
 
 from reportlab.lib import colors
@@ -14,8 +14,31 @@ from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 from datetime import datetime
 import os
 import matplotlib
-matplotlib.use("Agg")
+matplotlib.use("Agg") # Usar backend no interactivo
 import matplotlib.pyplot as plt
+
+# ============================================
+# Paleta fría profesional
+# ============================================
+COLOR_HEADER = '#2F6690'       # Azul acero
+COLOR_ROW = '#CFE0F3'          # Azul claro
+COLOR_TOTAL = '#9DB4C0'        # Azul grisáceo
+COLOR_TEXT = '#333333'         # Gris carbón
+COLOR_BAR = '#3A7CA5'          # Azul petróleo
+COLOR_BAR_EXCEED = '#7D8597'   # Gris azulado
+COLOR_TARGET_LINE = '#E9A44C'  # Naranja ámbar (contraste)
+COLOR_BG_CONTRIB = '#E1ECF4'   # Azul muy claro para contribuidores
+
+# Diccionario de traducción de días
+DAYS_ES = {
+    "Sunday": "Domingo", 
+    "Monday": "Lunes",
+    "Tuesday": "Martes",
+    "Wednesday": "Miércoles",
+    "Thursday": "Jueves",
+    "Friday": "Viernes",
+    "Saturday": "Sábado"
+}
 
 
 def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, output_folder='reports'):
@@ -52,7 +75,7 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
         'CustomTitle',
         parent=styles['Heading1'],
         fontSize=24,
-        textColor=colors.HexColor("#1E3A8A"),
+        textColor=colors.HexColor(COLOR_TEXT),
         spaceAfter=10,
         alignment=TA_CENTER,
         fontName='Helvetica-Bold'
@@ -62,7 +85,7 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
         'CustomSubtitle',
         parent=styles['Normal'],
         fontSize=11,
-        textColor=colors.HexColor("#6B7280"),
+        textColor=colors.grey,
         spaceAfter=10,
         alignment=TA_CENTER
     )
@@ -96,72 +119,41 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
             elif col == '$ Venta (dls)':
                 row_data.append(f"${value:,.0f}" if isinstance(value, (int, float)) else str(value))
             else:
+                # Traducción de los días si aplica
+                if col == 'Day' and str(value) in DAYS_ES:
+                    value = DAYS_ES[str(value)]
                 row_data.append(str(value) if value != '' else '')
         data.append(row_data)
 
     table = Table(data, repeatRows=1)
     table_style = TableStyle([
         # Encabezado
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#3B82F6")),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(COLOR_HEADER)),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 10),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
 
         # Cuerpo
-        ('BACKGROUND', (0, 1), (-1, -2), colors.HexColor("#F3F4F6")),
-        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+        ('BACKGROUND', (0, 1), (-1, -2), colors.HexColor(COLOR_ROW)),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor(COLOR_TEXT)),
         ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
         ('FONTSIZE', (0, 1), (-1, -1), 9),
 
         # Fila total
-        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#E5E7EB")),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor(COLOR_TOTAL)),
         ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
         ('FONTSIZE', (0, -1), (-1, -1), 10),
-        ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor("#1E40AF")),
+        ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor(COLOR_HEADER)),
 
         # Bordes
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#9CA3AF")),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('TOPPADDING', (0, 1), (-1, -1), 6),
         ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
     ])
     table.setStyle(table_style)
     elements.append(table)
-
-    # ========================================================================================
-    # GRÁFICA: SCRAP RATE POR DÍA
-    # ========================================================================================
-    days = df['Day'][:-1]
-    rates = df['Rate'][:-1]
-    target = df['Target Rate'].iloc[0] if 'Target Rate' in df.columns else 0.0
-
-    fig, ax = plt.subplots(figsize=(8, 3))
-    bars = ax.bar(days, rates, color="#3B82F6", edgecolor="#1E40AF", linewidth=0.8)
-
-    # Resaltar valores sobre el target
-    for bar, rate in zip(bars, rates):
-        color = "#EF4444" if rate > target else "#3B82F6"
-        bar.set_color(color)
-        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.1,
-                f"{rate:.2f}", ha='center', va='bottom', fontsize=9, fontweight='bold', color="#374151")
-
-    # Línea de objetivo
-    ax.axhline(y=target, color="#DC2626", linewidth=1.8, linestyle="--", label=f"Target ({target:.2f})")
-    ax.set_ylabel("Rate", fontsize=10, fontweight="bold")
-    ax.set_xlabel("Días", fontsize=10, fontweight="bold")
-    ax.legend(frameon=False, fontsize=9)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    plt.tight_layout()
-
-    chart1_path = os.path.join(output_folder, "temp_chart_rates.png")
-    plt.savefig(chart1_path, dpi=120)
-    plt.close()
-
-    img1 = Image(chart1_path, width=7 * inch, height=2.5 * inch)
-    elements.append(Spacer(1, 0.3 * inch))
-    elements.append(img1)
 
     # ========================================================================================
     # PÁGINA 2: CONTRIBUIDORES (si existen)
@@ -172,7 +164,7 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
             'ContributorsTitle',
             parent=styles['Heading2'],
             fontSize=18,
-            textColor=colors.HexColor("#1E3A8A"),
+            textColor=colors.HexColor(COLOR_TEXT),
             spaceAfter=15,
             alignment=TA_CENTER,
             fontName='Helvetica-Bold'
@@ -200,27 +192,28 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
             contrib_data.append(row_data)
 
         contrib_table = Table(contrib_data, repeatRows=1)
-        contrib_style = TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        contrib_table_style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(COLOR_BAR)),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor("#F9FAFB")),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#9CA3AF")),
+            ('BACKGROUND', (0, 1), (-1, -2), colors.HexColor(COLOR_BG_CONTRIB)),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor(COLOR_TOTAL)),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor(COLOR_TEXT)),
+            ('ALIGN', (2, 1), (2, -1), 'LEFT'),
         ])
 
-        # Resaltar filas hasta 80%
+        # Filas hasta 80% en azul tenue
         for i in range(1, len(contrib_data)):
             try:
                 cumulative = float(contrib_data[i][-2].replace('%', ''))
                 if cumulative <= 80.0:
-                    contrib_style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor("#DBEAFE"))
+                    contrib_table_style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor('#BBD6E2'))
             except Exception:
                 pass
 
-        contrib_table.setStyle(contrib_style)
+        contrib_table.setStyle(contrib_table_style)
         elements.append(contrib_table)
 
         # Footer
@@ -229,7 +222,7 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
             'Footer',
             parent=styles['Normal'],
             fontSize=8,
-            textColor=colors.HexColor("#6B7280"),
+            textColor=colors.grey,
             alignment=TA_RIGHT
         )
         footer_text = "Reporte generado automáticamente por Metric Scrap System – © 2025 Oscar Teran"
@@ -237,8 +230,5 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
 
     # Construcción final del PDF
     doc.build(elements)
-
-    if os.path.exists(chart1_path):
-        os.remove(chart1_path)
-
+    
     return filepath

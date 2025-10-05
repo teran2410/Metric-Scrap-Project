@@ -1,5 +1,5 @@
 """
-Archivo de configuración para el análisis de Scrap Rate
+Config.py Archivo de configuración para el análisis de Scrap Rate
 """
 
 # ============================================
