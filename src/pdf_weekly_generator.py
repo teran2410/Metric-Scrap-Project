@@ -48,14 +48,15 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
     if df is None:
         return None
 
-    # Crear carpeta si no existe
+    # Crear carpeta de reportes si no existe
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
+    # Nombre del archivo
     filename = f"Scrap_Rate_W{week}_{year}.pdf"
     filepath = os.path.join(output_folder, filename)
 
-    # Crear documento
+    # Crear documento base
     doc = SimpleDocTemplate(
         filepath,
         pagesize=landscape(letter),
@@ -65,10 +66,11 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
         bottomMargin=30
     )
 
+    # Contenedor de elementos
     elements = []
 
     # ==============================
-    # Estilos globales del documento
+    # Estilos del documento
     # ==============================
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
@@ -174,7 +176,7 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
         elements.append(Spacer(1, 0.3 * inch))
 
         contrib_data = []
-        contrib_headers = ['Ranking', 'Part Number', 'Description', 'Quantity', 'Amount (USD)', '% Cumulative', 'Location']
+        contrib_headers = ['Ranking', 'Número de parte', 'Descripción', 'Cantidad', 'Monto (USD)', '% Acumulado', 'Ubicación']
         contrib_data.append(contrib_headers)
 
         for index, row in contributors_df.iterrows():
