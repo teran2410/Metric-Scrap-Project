@@ -17,13 +17,38 @@ def get_annual_contributors(scrap_df, year, top_n=10):
     Returns:
         DataFrame: DataFrame con los principales contribuidores o None
     """
+    # Validar entrada
+    if scrap_df is None or scrap_df.empty:
+        print("⚠️ scrap_df está vacío en get_annual_contributors")
+        return None
+    
+    if 'Create Date' not in scrap_df.columns:
+        print(f"❌ Columna 'Create Date' no existe. Columnas: {list(scrap_df.columns)}")
+        return None
+    
+    # Crear copia para no modificar el original
     scrap_df = scrap_df.copy()
-    scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'])
+    
+    # Convertir fecha con manejo de errores
+    try:
+        scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'], errors='coerce')
+    except Exception as e:
+        print(f"❌ Error al convertir Create Date: {e}")
+        return None
+    
+    # Eliminar filas con fechas inválidas
+    scrap_df = scrap_df.dropna(subset=['Create Date'])
+    
+    if scrap_df.empty:
+        print("⚠️ No hay fechas válidas después de la conversión")
+        return None
+    
     scrap_df['Year'] = scrap_df['Create Date'].dt.year
     
     scrap_year = scrap_df[scrap_df['Year'] == year]
     
     if scrap_year.empty:
+        print(f"⚠️ No hay datos para el año {year}")
         return None
     
     scrap_year = scrap_year.copy()
@@ -85,13 +110,38 @@ def get_annual_location_contributors(scrap_df, year, top_n=10):
     Returns:
         DataFrame: DataFrame con celdas ordenadas por contribución
     """
+    # Validar entrada
+    if scrap_df is None or scrap_df.empty:
+        print("⚠️ scrap_df está vacío en get_annual_location_contributors")
+        return None
+    
+    if 'Create Date' not in scrap_df.columns:
+        print(f"❌ Columna 'Create Date' no existe. Columnas: {list(scrap_df.columns)}")
+        return None
+    
+    # Crear copia
     scrap_df = scrap_df.copy()
-    scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'])
+    
+    # Convertir fecha
+    try:
+        scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'], errors='coerce')
+    except Exception as e:
+        print(f"❌ Error al convertir Create Date: {e}")
+        return None
+    
+    # Eliminar fechas inválidas
+    scrap_df = scrap_df.dropna(subset=['Create Date'])
+    
+    if scrap_df.empty:
+        print("⚠️ No hay fechas válidas")
+        return None
+    
     scrap_df['Year'] = scrap_df['Create Date'].dt.year
     
     scrap_year = scrap_df[scrap_df['Year'] == year]
     
     if scrap_year.empty:
+        print(f"⚠️ No hay datos para el año {year}")
         return None
     
     scrap_year = scrap_year.copy()
@@ -123,5 +173,9 @@ def get_annual_location_contributors(scrap_df, year, top_n=10):
 
 def export_annual_contributors_to_console(scrap_df, year, top_n=10):
     """Obtiene el reporte de contribuidores anuales"""
-    contributors = get_annual_contributors(scrap_df, year, top_n)
-    return contributors
+    try:
+        contributors = get_annual_contributors(scrap_df, year, top_n)
+        return contributors
+    except Exception as e:
+        print(f"❌ Error en export_annual_contributors_to_console: {e}")
+        return None

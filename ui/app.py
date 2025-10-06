@@ -107,7 +107,7 @@ class ScrapRateApp(ctk.CTk):
         
         # Pestaña Anual (en desarrollo)
         annual_frame = self.tabview.tab("Anual")
-        self.annual_tab = AnnualTab(annual_frame, self)
+        self.anual_tab = AnnualTab(annual_frame, self)
 
         # Pestañas futuras (en desarrollo)
         custom_frame = self.tabview.tab("Personalizado")
