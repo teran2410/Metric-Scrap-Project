@@ -8,13 +8,13 @@ import os
 from ui.tabs.weekly_tab import WeeklyTab
 from ui.tabs.monthly_tab import MonthlyTab
 from ui.tabs.quarterly_tab import QuarterlyTab
-from ui.tabs.future_tabs import CustomTab, AnnualTab
+from ui.tabs.annual_tab import AnnualTab
+from ui.tabs.future_tabs import CustomTab
 
 from config import (
     APP_TITLE, APP_WIDTH, APP_HEIGHT, 
     APP_THEME, APP_COLOR_THEME, APP_ICON_PATH
 )
-
 
 class ScrapRateApp(ctk.CTk):
     """Aplicación principal para análisis de Scrap Rate"""
@@ -105,10 +105,11 @@ class ScrapRateApp(ctk.CTk):
         quarterly_frame = self.tabview.tab("Trimestral")
         self.quarterly_tab = QuarterlyTab(quarterly_frame, self)
         
-        # Pestañas futuras (en desarrollo)
+        # Pestaña Anual (en desarrollo)
         annual_frame = self.tabview.tab("Anual")
-        self.annual_tab = AnnualTab(annual_frame)
+        self.annual_tab = AnnualTab(annual_frame, self)
 
+        # Pestañas futuras (en desarrollo)
         custom_frame = self.tabview.tab("Personalizado")
         self.custom_tab = CustomTab(custom_frame)
 

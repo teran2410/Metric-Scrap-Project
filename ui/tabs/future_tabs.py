@@ -15,18 +15,6 @@ class QuarterlyTab(BaseTab):
         """Crea el contenido de la pestaña trimestral"""
         self.create_development_message("Módulo en desarrollo")
 
-
-class AnnualTab(BaseTab):
-    """Pestaña para reportes anuales (en desarrollo)"""
-    
-    def __init__(self, parent_frame):
-        super().__init__(parent_frame)
-        self.create_content()
-    
-    def create_content(self):
-        """Crea el contenido de la pestaña anual"""
-        self.create_development_message("Módulo en desarrollo")
-
 class CustomTab(BaseTab):
     """Pestaña para reportes con fecha personalizada (en desarrollo)"""
     

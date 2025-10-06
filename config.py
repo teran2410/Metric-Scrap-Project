@@ -22,6 +22,19 @@ TARGET_RATES = {
 }
 
 # ============================================
+# CONFIGURACIÓN DE REASON CODES
+# ============================================
+REASON_CODES = {
+    'SCP': 'SCRAP & REWORK',
+    'SCI': 'SCRAP COMM INTERMITTENT BLJCK',
+    'SQE': 'SCRAP VENDOR QUALITY ISSUES',
+    'CCP': 'CORRECT CONSUMPTION PARTS ACCT',
+    'CPS': 'CORRECT PRODUCT SUPPLIES ACCOUNT',
+    'CSC': 'CORRECT SCRAP & RW',
+    'SDV': 'SCRAP DOUBLE DOWN VALIDATION'
+}
+
+# ============================================
 # RUTAS DE ARCHIVOS
 # ============================================
 DATA_FILE_PATH = 'data/test pandas.xlsx'  # Ruta local
