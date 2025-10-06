@@ -176,7 +176,7 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
         elements.append(Spacer(1, 0.3 * inch))
 
         contrib_data = []
-        contrib_headers = ['Ranking', 'Número de parte', 'Descripción', 'Cantidad', 'Monto (USD)', '% Acumulado', 'Ubicación']
+        contrib_headers = ['Ranking', 'Número de parte', 'Descripción', 'Cantidad', 'Monto (USD)', '% Acumulado', 'Celda']
         contrib_data.append(contrib_headers)
 
         for index, row in contributors_df.iterrows():

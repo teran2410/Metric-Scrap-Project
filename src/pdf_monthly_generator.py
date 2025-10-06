@@ -201,7 +201,7 @@ def generate_monthly_pdf_report(df, contributors_df, month, year, scrap_df=None,
         elements.append(Spacer(1, 0.3 * inch))
 
         contrib_data = []
-        contrib_headers = ['Ranking', 'Part Number', 'Description', 'Quantity', 'Amount (USD)', '% Cumulative', 'Location']
+        contrib_headers = ['Ranking', 'Número de parte', 'Descripción', 'Cantidad', 'Monto (USD)', '% Acumulado', 'Celda']
         contrib_data.append(contrib_headers)
 
         for _, row in contributors_df.iterrows():
