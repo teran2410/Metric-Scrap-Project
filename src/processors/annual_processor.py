@@ -19,7 +19,6 @@ def process_annual_data(scrap_df, ventas_df, horas_df, year):
     Returns:
         DataFrame: DataFrame con el reporte anual por meses o None si no hay datos
     """
-    
     # Validar que los DataFrames no estén vacíos
     if scrap_df is None or scrap_df.empty:
         print("⚠️ scrap_df está vacío")
@@ -85,7 +84,7 @@ def process_annual_data(scrap_df, ventas_df, horas_df, year):
     # Agregar columna de trimestre
     scrap_year['Quarter'] = scrap_year['Create Date'].dt.quarter
     ventas_year['Quarter'] = ventas_year['Create Date'].dt.quarter
-    horas_year['Quarter'] = horas_year['Create Date'].dt.quarter
+    horas_year['Quarter'] = horas_year['Trans Date'].dt.quarter
     
     # Agrupar por mes
     scrap_monthly = scrap_year.groupby('Month')['Total Posted'].sum()

@@ -15,17 +15,17 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from src.processors.annual_processor import get_annual_weeks_data
 from src.analysis.annual_contributors import get_annual_location_contributors
-from src.processors.data_loader import load_data
 from config import TARGET_RATES
 
 # Paleta fría profesional
-COLOR_HEADER = '#2F6690'
-COLOR_ROW = '#CFE0F3'
-COLOR_TOTAL = '#9DB4C0'
-COLOR_TEXT = '#333333'
-COLOR_BAR = '#3A7CA5'
-COLOR_BAR_EXCEED = '#7D8597'
-COLOR_BG_CONTRIB = '#E1ECF4'
+COLOR_HEADER = '#2F6690'       # Azul acero
+COLOR_ROW = '#CFE0F3'          # Azul claro
+COLOR_TOTAL = '#9DB4C0'        # Azul grisáceo
+COLOR_TEXT = '#333333'         # Gris carbón
+COLOR_BAR = '#3A7CA5'          # Azul petróleo
+COLOR_BAR_EXCEED = '#7D8597'   # Gris azulado
+COLOR_TARGET_LINE = '#E9A44C'  # Naranja ámbar (contraste)
+COLOR_BG_CONTRIB = '#E1ECF4'   # Azul muy claro para contribuidores
 
 # Diccionario de meses
 MONTHS_ES = {
@@ -43,7 +43,7 @@ MONTHS_ES = {
     12: "Diciembre"
 }
 
-def generate_annual_pdf_report(df, contributors_df, year, scrap_df=None, ventas_df=None, horas_df=None, output_folder='reports'):
+def generate_annual_pdf_report(df, contributors_df, year, scrap_df, ventas_df, horas_df, output_folder='reports'):
     """Genera un PDF con el reporte anual de Scrap Rate"""
     if df is None:
         return None
@@ -158,18 +158,8 @@ def generate_annual_pdf_report(df, contributors_df, year, scrap_df=None, ventas_
     elements.append(img_months)
     elements.append(Spacer(1, 0.2 * inch))
     
-    # Gráfica 2: Por semanas - RECARGAR DATOS FRESCOS
-    weeks_data = None
-    try:
-        print("📊 Cargando datos frescos para gráfica semanal...")
-        fresh_scrap, fresh_ventas, fresh_horas = load_data()
-        if fresh_scrap is not None and fresh_ventas is not None and fresh_horas is not None:
-            weeks_data = get_annual_weeks_data(fresh_scrap, fresh_ventas, fresh_horas, year)
-        else:
-            print("⚠️ No se pudieron cargar datos frescos para gráfica semanal")
-    except Exception as e:
-        print(f"⚠️ Error al generar gráfica semanal: {e}")
-        weeks_data = None
+    # Gráfica 2: Por semanas
+    weeks_data = get_annual_weeks_data(scrap_df, ventas_df, horas_df, year)
     
     if weeks_data is not None and not weeks_data.empty:
         # Tomar muestras cada 4 semanas para mejor legibilidad
@@ -196,8 +186,6 @@ def generate_annual_pdf_report(df, contributors_df, year, scrap_df=None, ventas_
         
         img_weeks = Image(chart_weeks_path, width=7 * inch, height=2.4 * inch)
         elements.append(img_weeks)
-    else:
-        print("⚠️ Saltando gráfica semanal - no hay datos disponibles")
     
     # PÁGINA 3: TOP CONTRIBUIDORES
     if contributors_df is not None and not contributors_df.empty:
@@ -211,7 +199,7 @@ def generate_annual_pdf_report(df, contributors_df, year, scrap_df=None, ventas_
         elements.append(Spacer(1, 0.3 * inch))
         
         contrib_data = []
-        contrib_headers = ['Ranking', 'Número de parte', 'Descripción', 'Cantidad', 'Monto (USD)', '% Acumulado', 'Celda']
+        contrib_headers = ['Ranking', 'Part Number', 'Description', 'Quantity', 'Amount (USD)', '% Cumulative', 'Location']
         contrib_data.append(contrib_headers)
         
         for _, row in contributors_df.iterrows():
@@ -252,25 +240,12 @@ def generate_annual_pdf_report(df, contributors_df, year, scrap_df=None, ventas_
         contrib_table.setStyle(contrib_table_style)
         elements.append(contrib_table)
     
-    # PÁGINA 4: PARETO DE CELDAS - RECARGAR DATOS FRESCOS
-    locations_data = None
-    try:
-        print("📊 Cargando datos frescos para Pareto de celdas...")
-        fresh_scrap, _, _ = load_data()
-        if fresh_scrap is not None:
-            locations_data = get_annual_location_contributors(fresh_scrap, year, top_n=10)
-        else:
-            print("⚠️ No se pudieron cargar datos para Pareto")
-    except Exception as e:
-        print(f"⚠️ Error al generar Pareto: {e}")
-        locations_data = None
+    # PÁGINA 4: PARETO DE CELDAS
+    locations_data = get_annual_location_contributors(scrap_df, year, top_n=10)
     
     if locations_data is not None and not locations_data.empty:
         elements.append(PageBreak())
         
-        contrib_title_style = ParagraphStyle('ContribTitle', parent=styles['Heading2'], fontSize=18,
-                                              textColor=colors.HexColor(COLOR_TEXT), spaceAfter=15,
-                                              alignment=TA_CENTER, fontName='Helvetica-Bold')
         pareto_title = Paragraph("PARETO: CELDAS CONTRIBUIDORAS AL SCRAP ANUAL", contrib_title_style)
         elements.append(pareto_title)
         elements.append(Spacer(1, 0.3 * inch))
@@ -312,19 +287,12 @@ def generate_annual_pdf_report(df, contributors_df, year, scrap_df=None, ventas_
                                        textColor=colors.grey, alignment=TA_RIGHT)
         footer_text = "Reporte generado automáticamente por Metric Scrap System – © 2025 Oscar Teran"
         elements.append(Paragraph(footer_text, footer_style))
-    else:
-        print("⚠️ Saltando Pareto - no hay datos disponibles")
     
     doc.build(elements)
     
     # Limpiar imágenes temporales
-    for path in [chart_months_path, 
-                 chart_weeks_path if 'chart_weeks_path' in locals() else None, 
-                 chart_pareto_path if 'chart_pareto_path' in locals() else None]:
+    for path in [chart_months_path, chart_weeks_path if weeks_data is not None else None, chart_pareto_path if locations_data is not None else None]:
         if path and os.path.exists(path):
-            try:
-                os.remove(path)
-            except:
-                pass
+            os.remove(path)
     
     return filepath
