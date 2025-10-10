@@ -12,7 +12,7 @@ from ui.tabs.base_tab import BaseTab
 from src.processors.data_loader import load_data
 from src.processors.weekly_processor import process_weekly_data
 from src.pdf_weekly_generator import generate_weekly_pdf_report
-from src.analysis.weekly_contributors import export_contributors_to_console
+from src.analysis.weekly_contributors import export_contributors_to_console, get_weekly_location_contributors
 
 class WeeklyTab(BaseTab):
     """Pestaña para generación de reportes semanales"""
@@ -156,6 +156,7 @@ class WeeklyTab(BaseTab):
             self.root_app.after(0, lambda: self.status_label.configure(text="🔍 Analizando contribuidores..."))
             
             contributors = export_contributors_to_console(scrap_df, week, year, top_n=10)
+            locations = get_weekly_location_contributors(scrap_df, week, year, top_n=10)
             
             # Paso 4: Generar PDF
             self.root_app.after(0, lambda: self.status_label.configure(text="📄 Generando PDF..."))
@@ -167,7 +168,8 @@ class WeeklyTab(BaseTab):
                 contributors,
                 week, 
                 year,
-                scrap_df
+                scrap_df,
+                locations
             )
             
             # Ocultar progreso

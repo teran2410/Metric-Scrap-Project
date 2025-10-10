@@ -1,5 +1,5 @@
 """
-Módulo para análisis de principales contribuidores de scrap
+weekly_contributors.py - Módulo para análisis de principales contribuidores de scrap
 """
 
 import pandas as pd
@@ -117,3 +117,83 @@ def export_contributors_to_console(scrap_df, week, year, top_n=10):
     """
     contributors = get_top_contributors_by_week(scrap_df, week, year, top_n)
     return contributors
+
+def get_weekly_location_contributors(scrap_df, week_number, year, top_n=10):
+    """
+    Obtiene las principales celdas/ubicaciones contribuidoras de scrap para una semana específica
+    
+    Args:
+        scrap_df (DataFrame): DataFrame con datos de scrap
+        week_number (int): Número de semana a procesar
+        year (int): Año a procesar
+        top_n (int): Número de celdas principales a mostrar (default: 10)
+        
+    Returns:
+        DataFrame: DataFrame con las celdas contribuidoras ordenadas por monto
+    """
+    
+    # Hacer copia
+    scrap_df = scrap_df.copy()
+    
+    # Convertir fecha
+    scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'])
+    
+    # Agregar semana y año
+    scrap_df['Week'] = scrap_df['Create Date'].dt.strftime('%U').astype(int)
+    scrap_df['Year'] = scrap_df['Create Date'].dt.year
+    
+    # Filtrar por semana específica
+    scrap_week = scrap_df[(scrap_df['Week'] == week_number) & (scrap_df['Year'] == year)]
+    
+    if scrap_week.empty:
+        return None
+    
+    # Verificar que exista columna Location
+    if 'Location' not in scrap_week.columns:
+        return None
+    
+    # Convertir a valores positivos
+    scrap_week = scrap_week.copy()
+    scrap_week['Total Posted'] = scrap_week['Total Posted'].abs()
+    
+    # Agrupar por Location (Celda)
+    location_contrib = scrap_week.groupby('Location', as_index=False).agg({
+        'Total Posted': 'sum'
+    })
+    
+    # Ordenar de mayor a menor
+    location_contrib = location_contrib.sort_values('Total Posted', ascending=False)
+    location_contrib = location_contrib.reset_index(drop=True)
+    
+    # Tomar top N
+    location_contrib = location_contrib.head(top_n)
+    
+    # Calcular porcentaje acumulado
+    total_amount = location_contrib['Total Posted'].sum()
+    if total_amount > 0:
+        location_contrib['Cumulative %'] = (
+            location_contrib['Total Posted'].cumsum() / total_amount * 100
+        ).round(2)
+    else:
+        location_contrib['Cumulative %'] = 0.0
+    
+    # Agregar ranking
+    location_contrib.insert(0, 'Ranking', range(1, len(location_contrib) + 1))
+    
+    # Renombrar columnas
+    location_contrib = location_contrib.rename(columns={
+        'Location': 'Celda',
+        'Total Posted': 'Monto (dls)'
+    })
+    
+    # Agregar fila de totales
+    total_row = pd.DataFrame({
+        'Ranking': ['TOTAL'],
+        'Celda': [''],
+        'Monto (dls)': [location_contrib['Monto (dls)'].sum()],
+        'Cumulative %': ['']
+    })
+    
+    location_contrib = pd.concat([location_contrib, total_row], ignore_index=True)
+    
+    return location_contrib

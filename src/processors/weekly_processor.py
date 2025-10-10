@@ -3,7 +3,7 @@ Módulo para el procesamiento de datos de Scrap, Ventas y Horas
 """
 
 import pandas as pd
-from config import TARGET_RATES
+from config import TARGET_WEEK_RATES
 
 def process_weekly_data(scrap_df, ventas_df, horas_df, week_number, year):
     """
@@ -66,7 +66,7 @@ def process_weekly_data(scrap_df, ventas_df, horas_df, week_number, year):
     result = pd.DataFrame(index=week_dates)
     result['Day'] = result.index.strftime('%A')
     result['D'] = result.index.strftime('%d').astype(int)
-    result['W'] = result.index.strftime('%U').astype(int)
+    result['W'] = result.index.strftime('%U').astype(int) + 1 
     result['M'] = result.index.strftime('%m').astype(int)
 
     # Rellenar datos
@@ -80,8 +80,9 @@ def process_weekly_data(scrap_df, ventas_df, horas_df, week_number, year):
         axis=1
     )
     
-    # Agregar Target Rate según el mes
-    result['Target Rate'] = result['M'].map(TARGET_RATES)
+    # Usar el número de semana pasado como parámetro en lugar de mapear por mes (que puede variar dentro de la semana)
+    target_rate_for_week = TARGET_WEEK_RATES.get(week_number, 0.50)  # Default 0.50 si no existe
+    result['Target Rate'] = target_rate_for_week
     
     # Calcular totales
     total_scrap = result['Scrap'].sum()
@@ -98,7 +99,7 @@ def process_weekly_data(scrap_df, ventas_df, horas_df, week_number, year):
         'Scrap': [total_scrap],
         'Hrs Prod.': [total_horas],
         'Rate': [total_rate],
-        'Target Rate': [TARGET_RATES[result['M'].iloc[0]]],
+        'Target Rate': [target_rate_for_week],
         '$ Venta (dls)': [total_ventas]
     })
     
