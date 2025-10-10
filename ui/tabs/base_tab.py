@@ -19,29 +19,6 @@ class BaseTab:
         self.frame = parent_frame
         self.current_year = datetime.now().year
         self.current_week = int(datetime.now().strftime('%U'))
-        
-    def create_development_message(self, title="Módulo en desarrollo"):
-        """
-        Crea un mensaje de desarrollo para pestañas futuras
-        
-        Args:
-            title (str): Título del mensaje
-        """
-        info_label = ctk.CTkLabel(
-            self.frame,
-            text=title,
-            font=ctk.CTkFont(size=16, weight="bold"),
-            text_color="orange"
-        )
-        info_label.pack(pady=60)
-        
-        description_label = ctk.CTkLabel(
-            self.frame,
-            text="Esta funcionalidad estará disponible próximamente.",
-            font=ctk.CTkFont(size=12),
-            text_color="gray"
-        )
-        description_label.pack(pady=10)
     
     def create_year_selector(self, command=None):
         """

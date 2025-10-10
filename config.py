@@ -76,4 +76,5 @@ APP_ICON_PATH = "assets/icon.ico"
 # CONFIGURACIÓN DE REPORTES
 # ============================================
 REPORTS_FOLDER = "reports"
+WEEK_REPORTS_FOLDER = "H:/Ingenieria/Ing. Procesos/Metricos FA/Metrico Scrap/2025/reportes/semanales"
 TOP_CONTRIBUTORS_COUNT = 10  # Número de principales contribuidores a mostrar

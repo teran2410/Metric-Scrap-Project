@@ -93,7 +93,7 @@ class ScrapRateApp(ctk.CTk):
     def create_tabs(self):
         """Inicializa todas las pestañas"""
         
-        # Pestaña Semanal (funcional)
+        # Pestaña Semanal (terminada)
         weekly_frame = self.tabview.tab("Semanal")
         self.weekly_tab = WeeklyTab(weekly_frame, self)
         
@@ -109,7 +109,7 @@ class ScrapRateApp(ctk.CTk):
         annual_frame = self.tabview.tab("Anual")
         self.anual_tab = AnnualTab(annual_frame, self)
 
-        # Pestañas futuras (en desarrollo)
+        # Pestañas personalizada (funcional)
         custom_frame = self.tabview.tab("Personalizado")
         self.custom_tab = CustomTab(custom_frame, self)
 
