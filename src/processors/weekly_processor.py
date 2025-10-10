@@ -68,7 +68,7 @@ def process_weekly_data(scrap_df, ventas_df, horas_df, week_number, year):
     result['D'] = result.index.strftime('%d').astype(int)
     result['W'] = result.index.strftime('%U').astype(int)
     result['M'] = result.index.strftime('%m').astype(int)
-    
+
     # Rellenar datos
     result['Scrap'] = result.index.map(scrap_daily).fillna(0)
     result['Hrs Prod.'] = result.index.map(horas_daily).fillna(0)

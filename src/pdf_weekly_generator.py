@@ -40,6 +40,21 @@ DAYS_ES = {
     "Saturday": "Sábado"
 }
 
+# Diccionario de traducción de meses con formato %b
+MONTHS_NUM_TO_ES = {
+    1: "Enero",
+    2: "Febrero",
+    3: "Marzo",
+    4: "Abril", 
+    5: "Mayo",
+    6: "Junio",
+    7: "Julio",
+    8: "Agosto",
+    9: "Septiembre",
+    10: "Octubre",
+    11: "Noviembre",
+    12: "Diciembre"
+}
 
 def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, output_folder='reports'):
     """
@@ -120,6 +135,12 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, o
                 row_data.append(f"{value:.2f}" if isinstance(value, (int, float)) else str(value))
             elif col == '$ Venta (dls)':
                 row_data.append(f"${value:,.0f}" if isinstance(value, (int, float)) else str(value))
+            elif col == 'M':
+            # Si el valor es numérico, traducir a mes
+                if isinstance(value, (int, float)):
+                    row_data.append(MONTHS_NUM_TO_ES.get(int(value), str(value)))
+                else:
+                    row_data.append(str(value) if value != '' else '')
             else:
                 # Traducción de los días si aplica
                 if col == 'Day' and str(value) in DAYS_ES:
