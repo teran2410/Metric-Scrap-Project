@@ -7,7 +7,7 @@ from tkinter import messagebox
 from datetime import datetime
 import os
 import threading
-from tkcalendar import DateEntry
+import re
 from tkinter import ttk
 import tkinter as tk
 
@@ -34,56 +34,42 @@ class CustomTab(BaseTab):
 
     def create_content(self):
         """Crea el contenido de la pestaña personalizada"""
-        # Frame para las fechas
-        dates_frame = ctk.CTkFrame(self.frame)
-        dates_frame.pack(pady=10, padx=20, fill="x")
-
-        # Fecha inicial
+        
+        # Label para Fecha Inicial
         start_label = ctk.CTkLabel(
-            dates_frame,
+            self.frame,
             text="Fecha Inicial:",
-            font=ctk.CTkFont(size=14)
+            font=ctk.CTkFont(size=14, weight="bold")
         )
-        start_label.grid(row=0, column=0, padx=5, pady=5)
+        start_label.pack(pady=(20, 5))
 
-        # Crear un frame especial para el DateEntry
-        start_cal_frame = ttk.Frame(dates_frame)
-        start_cal_frame.grid(row=0, column=1, padx=5, pady=5)
-        
-        self.start_date = DateEntry(
-            start_cal_frame,
-            width=12,
-            background='darkblue',
-            foreground='white',
-            borderwidth=2,
-            date_pattern='dd/mm/yyyy'
+        # Entry para fecha inicial
+        self.start_date = ctk.CTkEntry(
+            self.frame,
+            width=120,
+            height=30,
+            font=ctk.CTkFont(size=14),
+            placeholder_text="dd/mm/aaaa"
         )
-        self.start_date.pack()
+        self.start_date.pack(pady=5)
 
-        # Fecha final
+        # Label para Fecha Final
         end_label = ctk.CTkLabel(
-            dates_frame,
+            self.frame,
             text="Fecha Final:",
-            font=ctk.CTkFont(size=14)
+            font=ctk.CTkFont(size=14, weight="bold")
         )
-        end_label.grid(row=0, column=2, padx=5, pady=5)
+        end_label.pack(pady=(15, 5))
 
-        # Frame para el segundo DateEntry
-        end_cal_frame = ttk.Frame(dates_frame)
-        end_cal_frame.grid(row=0, column=3, padx=5, pady=5)
-        
-        self.end_date = DateEntry(
-            end_cal_frame,
-            width=12,
-            background='darkblue',
-            foreground='white',
-            borderwidth=2,
-            date_pattern='dd/mm/yyyy'
+        # Entry para fecha final
+        self.end_date = ctk.CTkEntry(
+            self.frame,
+            width=120,
+            height=30,
+            font=ctk.CTkFont(size=14),
+            placeholder_text="dd/mm/aaaa"
         )
-        self.end_date.pack()
-
-        # Configurar grid
-        dates_frame.grid_columnconfigure((1, 3), weight=1)
+        self.end_date.pack(pady=5)
 
         # Barra de progreso
         self.progress_bar, self.status_label = self.create_progress_bar()
@@ -106,12 +92,51 @@ class CustomTab(BaseTab):
         thread = threading.Thread(target=self.generate_pdf, daemon=True)
         thread.start()
 
+    def validate_date(self, date_str):
+        """
+        Valida el formato de fecha dd/mm/aaaa y su validez
+        Args:
+            date_str: String con la fecha a validar
+        Returns:
+            datetime o None si la fecha es inválida
+        """
+        # Verificar formato
+        if not re.match(r'^\d{2}/\d{2}/\d{4}$', date_str):
+            return None
+        
+        try:
+            # Convertir a datetime
+            return datetime.strptime(date_str, '%d/%m/%Y')
+        except ValueError:
+            return None
+
     def generate_pdf(self):
         """Genera el PDF personalizado con los datos del rango de fechas"""
         try:
-            # Obtener fechas
-            start_date = datetime.combine(self.start_date.get_date(), datetime.min.time())
-            end_date = datetime.combine(self.end_date.get_date(), datetime.max.time())
+            # Obtener y validar fechas
+            start_str = self.start_date.get()
+            end_str = self.end_date.get()
+            
+            # Validar formato y existencia de fechas
+            start_date = self.validate_date(start_str)
+            if not start_date:
+                messagebox.showerror(
+                    "Error", 
+                    f"Fecha inicial inválida: {start_str}\nUse el formato dd/mm/aaaa"
+                )
+                return
+                
+            end_date = self.validate_date(end_str)
+            if not end_date:
+                messagebox.showerror(
+                    "Error", 
+                    f"Fecha final inválida: {end_str}\nUse el formato dd/mm/aaaa"
+                )
+                return
+            
+            # Ajustar las horas
+            start_date = datetime.combine(start_date, datetime.min.time())
+            end_date = datetime.combine(end_date, datetime.max.time())
 
             # Validar rango de fechas
             if start_date > end_date:
