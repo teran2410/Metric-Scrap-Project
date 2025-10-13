@@ -65,7 +65,7 @@ HORAS_SHEET_NAME = 'Horas Database'
 # ============================================
 # CONFIGURACIÓN DE LA APLICACIÓN 
 # ============================================
-APP_TITLE = "Scrap Analyzer"
+APP_TITLE = "Metric Scrap System"
 APP_WIDTH = 450
 APP_HEIGHT = 450
 APP_THEME = "system" # "light", "dark", "system"
@@ -77,4 +77,5 @@ APP_ICON_PATH = "assets/icon.ico"
 # ============================================
 REPORTS_FOLDER = "reports"
 WEEK_REPORTS_FOLDER = "H:/Ingenieria/Ing. Procesos/Metricos FA/Metrico Scrap/2025/reportes/semanales"
+MONTHLY_REPORTS_FOLDER = '' # Por definir
 TOP_CONTRIBUTORS_COUNT = 10  # Número de principales contribuidores a mostrar

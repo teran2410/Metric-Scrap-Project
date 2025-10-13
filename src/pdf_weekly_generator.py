@@ -16,6 +16,7 @@ import os
 import matplotlib
 matplotlib.use("Agg") # Usar backend no interactivo
 import matplotlib.pyplot as plt
+from config import WEEK_REPORTS_FOLDER
 
 # ============================================
 # Paleta fría profesional
@@ -56,7 +57,7 @@ MONTHS_NUM_TO_ES = {
     12: "Diciembre"
 }
 
-def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, locations_df=None, output_folder='reports'):
+def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, locations_df=None, output_folder=WEEK_REPORTS_FOLDER):
     """
     Genera un PDF con el reporte de Scrap Rate y principales contribuidores
     """
@@ -235,7 +236,6 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, l
         elements.append(Spacer(1, 0.3 * inch))
         img = Image(chart_path, width=8 * inch, height=3 * inch)
         elements.append(img)
-        # elements.append(Spacer(1, 0.3 * inch))
 
     # ========================================================================================
     # PÁGINA 2: CONTRIBUIDORES (si existen)
@@ -378,5 +378,14 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, l
 
     # Construcción final del PDF
     doc.build(elements)
-    
+
+    # Eliminación de archivos temporales si existen
+    # primera gráfica
+    if os.path.exists(chart_path):
+        os.remove(chart_path)
+
+    # grafica de pareto
+    if os.path.exists(chart_pareto_path):
+        os.remove(chart_pareto_path)
+
     return filepath
