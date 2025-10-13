@@ -80,8 +80,10 @@ def process_weekly_data(scrap_df, ventas_df, horas_df, week_number, year):
         axis=1
     )
     
-    # Usar el número de semana pasado como parámetro en lugar de mapear por mes (que puede variar dentro de la semana)
-    target_rate_for_week = TARGET_WEEK_RATES.get(week_number, 0.50)  # Default 0.50 si no existe
+    # Sumar 1 al week_number para obtener el valor real
+    # porque week_number viene 0-indexado (usuario ingresa 40, pero llega 39)
+    actual_week_number = week_number + 1
+    target_rate_for_week = TARGET_WEEK_RATES.get(actual_week_number, 0.50)
     result['Target Rate'] = target_rate_for_week
     
     # Calcular totales

@@ -12,7 +12,7 @@ from ui.tabs.base_tab import BaseTab
 from src.processors.data_loader import load_data
 from src.processors.monthly_processor import process_monthly_data
 from src.pdf_monthly_generator import generate_monthly_pdf_report
-from src.analysis.monthly_contributors import export_monthly_contributors_to_console
+from src.analysis.monthly_contributors import export_monthly_contributors_to_console, get_monthly_location_contributors
 
 
 class MonthlyTab(BaseTab):
@@ -182,6 +182,7 @@ class MonthlyTab(BaseTab):
             self.root_app.after(0, lambda: self.status_label.configure(text="🔍 Analizando contribuidores..."))
             
             contributors = export_monthly_contributors_to_console(scrap_df, month, year, top_n=10)
+            locations = get_monthly_location_contributors(scrap_df, month, year, top_n=10)
             
             # Paso 4: Generar PDF
             self.root_app.after(0, lambda: self.status_label.configure(text="📄 Generando PDF..."))
@@ -191,7 +192,8 @@ class MonthlyTab(BaseTab):
                 contributors,
                 month, 
                 year,
-                scrap_df
+                scrap_df,
+                locations
             )
             
             # Ocultar progreso

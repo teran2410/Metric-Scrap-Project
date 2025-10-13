@@ -137,11 +137,16 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, l
             elif col == '$ Venta (dls)':
                 row_data.append(f"${value:,.0f}" if isinstance(value, (int, float)) else str(value))
             elif col == 'M':
-            # Si el valor es numérico, traducir a mes
+                # Si el valor es numérico, traducir a mes
                 if isinstance(value, (int, float)):
                     row_data.append(MONTHS_NUM_TO_ES.get(int(value), str(value)))
                 else:
                     row_data.append(str(value) if value != '' else '')
+            elif col == 'W':
+                if str(value) != '':  # Si no es la fila de totales
+                    row_data.append(str(week))
+                else:
+                    row_data.append('')
             else:
                 # Traducción de los días si aplica
                 if col == 'Day' and str(value) in DAYS_ES:
@@ -176,6 +181,26 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, l
         ('TOPPADDING', (0, 1), (-1, -1), 6),
         ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
     ])
+
+    # IMPORTANTE: Agregar estilos ANTES de aplicar setStyle()
+    for i in range(1, len(data) - 1):  # Excluir header (0) y total (-1)
+        try:
+            # Obtener Rate y Target Rate de la fila actual
+            rate_str = str(data[i][7])  # Columna 'Rate' (índice 7)
+            target_str = str(data[i][8])  # Columna 'Target Rate' (índice 8)
+            
+            # Convertir a float (remover $ si existe)
+            rate = float(rate_str.replace('$', '').replace(',', ''))
+            target = float(target_str.replace('$', '').replace(',', ''))
+            
+            # Si el rate excede el target, colorear la fila
+            if rate > target:
+                table_style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor(COLOR_BAR_EXCEED))
+                table_style.add('TEXTCOLOR', (0, i), (-1, i), colors.white)
+        except (ValueError, IndexError) as e:
+            # Si hay algún error al convertir, simplemente continuar
+            pass
+    
     table.setStyle(table_style)
     elements.append(table)
 
