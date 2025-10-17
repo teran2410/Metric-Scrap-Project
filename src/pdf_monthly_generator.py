@@ -12,38 +12,14 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 from datetime import datetime
+from config import (
+    MONTHS_NUM_TO_ES, COLOR_BAR, COLOR_BAR_EXCEED, COLOR_BG_CONTRIB,
+    COLOR_HEADER, COLOR_TEXT, COLOR_TARGET_LINE, COLOR_TOTAL, COLOR_ROW
+)
 import os
 import matplotlib
 matplotlib.use("Agg") # Usar backend no interactivo
 import matplotlib.pyplot as plt
-
-# ============================================
-# Paleta fría profesional
-# ============================================
-COLOR_HEADER = '#2F6690'       # Azul acero
-COLOR_ROW = '#CFE0F3'          # Azul claro
-COLOR_TOTAL = '#9DB4C0'        # Azul grisáceo
-COLOR_TEXT = '#333333'         # Gris carbón
-COLOR_BAR = '#3A7CA5'          # Azul petróleo
-COLOR_BAR_EXCEED = '#7D8597'   # Gris azulado
-COLOR_TARGET_LINE = '#E9A44C'  # Naranja ámbar (contraste)
-COLOR_BG_CONTRIB = '#E1ECF4'   # Azul muy claro para contribuidores
-
-# Diccionario de meses
-MONTHS_ES = {
-    1: "Enero",
-    2: "Febrero",
-    3: "Marzo",
-    4: "Abril",
-    5: "Mayo",
-    6: "Junio",
-    7: "Julio",
-    8: "Agosto",
-    9: "Septiembre",
-    10: "Octubre",
-    11: "Noviembre",
-    12: "Diciembre"
-}
 
 def generate_monthly_pdf_report(df, contributors_df, month, year, scrap_df=None, locations_df=None, output_folder='reports'):
     """
@@ -57,7 +33,7 @@ def generate_monthly_pdf_report(df, contributors_df, month, year, scrap_df=None,
         os.makedirs(output_folder)
 
     # Nombre del archivo
-    month_name = MONTHS_ES.get(month, "Mes")
+    month_name = MONTHS_NUM_TO_ES.get(month, "Mes")
     filename = f"Scrap_Rate_{month_name}_{year}.pdf"
     filepath = os.path.join(output_folder, filename)
 
@@ -75,6 +51,8 @@ def generate_monthly_pdf_report(df, contributors_df, month, year, scrap_df=None,
 
     # Estilos de texto
     styles = getSampleStyleSheet()
+
+    # Estilo de título y subtítulo
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
@@ -98,11 +76,27 @@ def generate_monthly_pdf_report(df, contributors_df, month, year, scrap_df=None,
     title = Paragraph("REPORTE MENSUAL DEL MÉTRICO DE SCRAP", title_style)
     elements.append(title)
 
-    # Subtítulo con footer incluido
-    subtitle_text = f"{month_name} de {year} | Reporte generado automáticamente por Metric Scrap System – © 2025 Oscar Teran"
+    # Subtítulo
+    subtitle_text = f"{month_name} de {year} | Reporte generado automáticamente por Metric Scrap System"
     subtitle = Paragraph(subtitle_text, subtitle_style)
     elements.append(subtitle)
     elements.append(Spacer(1, 0.3 * inch))
+
+    # Determinar si la semana está dentro de la meta comparando el rate total vs target semanal
+    target_rate = df['Target Rate'].iloc[0] if 'Target Rate' in df.columns else 0.0
+    total_rate = df['Rate'].iloc[-1]
+    meets_target = total_rate <= target_rate
+    target_status = "✅ Dentro de la Meta" if meets_target else "❌ Fuera de la Meta"
+    target_style = ParagraphStyle(
+        'TargetStatus',
+        parent=styles['Heading2'],
+        fontSize=16,
+        textColor=colors.HexColor(COLOR_TEXT),
+        spaceAfter=20,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold'
+        )
+
 
     # ==============================================
     # PRIMERA TABLA: REPORTE MENSUAL POR SEMANAS

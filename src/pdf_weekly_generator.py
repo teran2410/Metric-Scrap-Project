@@ -12,42 +12,18 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER
 import os
+import pandas as pd
 from config import (
     WEEK_REPORTS_FOLDER, COLOR_HEADER, COLOR_ROW, COLOR_TOTAL, COLOR_BAR,
-    COLOR_BAR_EXCEED, COLOR_TEXT, COLOR_TARGET_LINE, COLOR_BG_CONTRIB
+    COLOR_BAR_EXCEED, COLOR_TEXT, COLOR_TARGET_LINE, COLOR_BG_CONTRIB,
+    DAYS_ES, MONTHS_NUM_TO_ES
 )
-
-# Diccionario de traducción de días
-DAYS_ES = {
-    "Sunday": "Domingo", 
-    "Monday": "Lunes",
-    "Tuesday": "Martes",
-    "Wednesday": "Miércoles",
-    "Thursday": "Jueves",
-    "Friday": "Viernes",
-    "Saturday": "Sábado"
-}
-
-# Diccionario de traducción de meses con formato %b
-MONTHS_NUM_TO_ES = {
-    1: "Enero",
-    2: "Febrero",
-    3: "Marzo",
-    4: "Abril", 
-    5: "Mayo",
-    6: "Junio",
-    7: "Julio",
-    8: "Agosto",
-    9: "Septiembre",
-    10: "Octubre",
-    11: "Noviembre",
-    12: "Diciembre"
-}
 
 def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, locations_df=None, output_folder=WEEK_REPORTS_FOLDER):
     """
     Genera un PDF con el reporte de Scrap Rate y principales contribuidores
     """
+
     if df is None:
         return None
 
@@ -72,10 +48,10 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, l
     # Contenedor de elementos
     elements = []
 
-    # ==============================
     # Estilos del documento
-    # ==============================
     styles = getSampleStyleSheet()
+
+    # Titulos personalizado
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
@@ -86,6 +62,7 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, l
         fontName='Helvetica-Bold'
     )
 
+    # Subtítulo personalizado
     subtitle_style = ParagraphStyle(
         'CustomSubtitle',
         parent=styles['Normal'],
@@ -104,7 +81,40 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, l
     subtitle_text = f"Semana {week} | Año {year} | Reporte generado automáticamente por Metric Scrap System"
     subtitle = Paragraph(subtitle_text, subtitle_style)
     elements.append(subtitle)
-    elements.append(Spacer(1, 0.3 * inch))
+
+    # Determinar si la semana está dentro de la meta comparando el rate total vs target semanal
+    try:
+        # Sumar columnas numéricas (ignorar celdas no numéricas como 'Total')
+        total_scrap = pd.to_numeric(df['Scrap'], errors='coerce').sum()
+        total_horas = pd.to_numeric(df['Hrs Prod.'], errors='coerce').sum()
+        total_rate = total_scrap / total_horas if total_horas > 0 else 0
+
+        # Obtener un target numérico representativo de la columna (normalmente el valor semanal)
+        target_vals = pd.to_numeric(df['Target Rate'], errors='coerce').dropna().unique()
+        target_rate = float(target_vals[0]) if len(target_vals) > 0 else 0
+
+        within = total_rate <= target_rate
+    except Exception:
+        # En caso de error, asumimos dentro de meta por defecto para no bloquear la generación
+        within = True
+        total_rate = 0
+        target_rate = 0
+
+    header_text = "DENTRO DE META" if within else "FUERA DE META"
+    header_color = colors.HexColor("#2E8B57") if within else colors.red
+
+    header_style = ParagraphStyle(
+        'TargetHeader',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=header_color,
+        spaceAfter=12,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold'
+    )
+
+    elements.append(Paragraph(header_text, header_style))
+    elements.append(Spacer(1, 0.2 * inch))
 
     # ========================================================================================
     # PRIMERA TABLA: REPORTE SEMANAL
@@ -233,24 +243,33 @@ def generate_weekly_pdf_report(df, contributors_df, week, year, scrap_df=None, l
 
         contrib_table = Table(contrib_data, repeatRows=1)
         contrib_table_style = TableStyle([
-            # Encabezado
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(COLOR_BAR)),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BACKGROUND', (0, 1), (-1, -2), colors.HexColor(COLOR_BG_CONTRIB)),
-            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor(COLOR_TOTAL)),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor(COLOR_TEXT)),
-            ('ALIGN', (2, 1), (2, -1), 'LEFT'),
+
+        # Encabezado
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(COLOR_BAR)),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+
+        # Cuerpo
+        ('BACKGROUND', (0, 1), (-1, -2), colors.HexColor(COLOR_BG_CONTRIB)),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor(COLOR_TEXT)),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+
+        # Fila total
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor(COLOR_TOTAL)),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+
+        # Bordes
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (2, 1), (2, -1), 'LEFT'),
         ])
 
-        # Filas hasta 80% en azul tenue
+        # Filas hasta 80% en rojo tenue
         for i in range(1, len(contrib_data)):
             try:
                 cumulative = float(contrib_data[i][-2].replace('%', ''))
                 if cumulative <= 80.0:
-                    contrib_table_style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor('#BBD6E2'))
+                    contrib_table_style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor('#FFCCCC'))
             except Exception:
                 pass
 
