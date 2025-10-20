@@ -18,7 +18,11 @@ class BaseTab:
         """
         self.frame = parent_frame
         self.current_year = datetime.now().year
-        self.current_week = int(datetime.now().strftime('%U'))
+        # Use ISO week number for consistency with processors (1-53)
+        try:
+            self.current_week = int(datetime.now().isocalendar()[1])
+        except Exception:
+            self.current_week = int(datetime.now().strftime('%U'))
     
     def create_year_selector(self, command=None):
         """

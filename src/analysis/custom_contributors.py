@@ -54,11 +54,11 @@ def get_top_contributors_custom(scrap_df, start_date, end_date, n_top=10):
     contributors = contributors.sort_values('Total Scrap', ascending=False)
     
     # Tomar los top n contribuidores
-    top_contributors = contributors.head(n_top)
+    top_contributors = contributors.head(n_top).copy()
     
     # Calcular el porcentaje del total
     total_scrap = contributors['Total Scrap'].sum()
-    top_contributors['% of Total'] = (top_contributors['Total Scrap'] / total_scrap * 100)
+    top_contributors.loc[:, '% of Total'] = (top_contributors['Total Scrap'] / total_scrap * 100)
     
     return top_contributors
 
@@ -111,10 +111,18 @@ def get_scrap_reasons_custom(scrap_df, start_date, end_date, n_top=10):
     reasons = reasons.sort_values('Total Scrap', ascending=False)
     
     # Tomar los top n razones
-    top_reasons = reasons.head(n_top)
+    top_reasons = reasons.head(n_top).copy()
     
     # Calcular el porcentaje del total
     total_scrap = reasons['Total Scrap'].sum()
-    top_reasons['% of Total'] = (top_reasons['Total Scrap'] / total_scrap * 100)
+    top_reasons.loc[:, '% of Total'] = (top_reasons['Total Scrap'] / total_scrap * 100)
     
     return top_reasons
+
+
+def get_custom_contributors(scrap_df, start_date, end_date, top_n=10):
+    """
+    Wrapper uniforme que expone get_custom_contributors para ReportService.
+    Delegará en get_top_contributors_custom.
+    """
+    return get_top_contributors_custom(scrap_df, start_date, end_date, n_top=top_n)

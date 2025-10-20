@@ -103,7 +103,10 @@ class WeeklyTab(BaseTab):
             
             # Validar que la semana no sea mayor a la actual (si el año es el actual)
             current_date = datetime.now()
-            current_week = int(current_date.strftime('%U'))
+            try:
+                current_week = int(current_date.isocalendar()[1])
+            except Exception:
+                current_week = int(current_date.strftime('%U'))
             current_year = current_date.year
             
             if year == current_year and week > current_week:
@@ -160,17 +163,36 @@ class WeeklyTab(BaseTab):
             
             # Paso 4: Generar PDF
             self.root_app.after(0, lambda: self.status_label.configure(text="📄 Generando PDF..."))
-            
+
             week += 1  # Ajustar a 1-indexado para el reporte
-            
-            filepath = generate_weekly_pdf_report(
-                result,
-                contributors,
-                week, 
-                year,
-                scrap_df,
-                locations
-            )
+
+            # Si la aplicación principal proporcionó un ReportService/adapter, usarlo
+            filepath = None
+            try:
+                service = getattr(self.root_app, 'report_service_weekly', None)
+                if service is not None:
+                    # Ejecutar servicio genérico
+                    filepath = service.run_report({'week': week, 'year': year})
+                else:
+                    # Fallback: usar el generador directo
+                    filepath = generate_weekly_pdf_report(
+                        result,
+                        contributors,
+                        week,
+                        year,
+                        scrap_df,
+                        locations
+                    )
+            except Exception:
+                # En caso de fallo en el service, intentar el fallback directo
+                filepath = generate_weekly_pdf_report(
+                    result,
+                    contributors,
+                    week,
+                    year,
+                    scrap_df,
+                    locations
+                )
             
             # Ocultar progreso
             self.root_app.after(0, lambda: self.hide_progress(

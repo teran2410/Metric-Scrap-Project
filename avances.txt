@@ -1,5 +1,0 @@
-en la app.py me quede trabajando con la ui del tab montly, falta generar la funcion para actualizar los meses del anio en curso.
-despues la logica para generar el pfd con los datos mensuales.
-
-se arregló el problema de la ui que empezaba con semana 0, ahora empieza con semana 1 y se ajustó app.py y pdf_generator.py para que indique semanas a partir de 1 en adelante.
-se hicieron mejoras en la ui y en pdf_generator, actualiza tu memoria con los códigos actualizados que te pase.

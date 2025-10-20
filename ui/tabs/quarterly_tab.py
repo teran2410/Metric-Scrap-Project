@@ -132,9 +132,31 @@ class QuarterlyTab(BaseTab):
                 return
             
             self.root_app.after(0, lambda: self.status_label.configure(text="⚙️ Procesando datos..."))
-            
-            result = process_quarterly_data(scrap_df, ventas_df, horas_df, quarter, year)
-            
+
+            service = getattr(self.root_app, 'report_service_quarterly', None)
+            if service:
+                filepath = service.run_report({'quarter': quarter, 'year': year})
+                if filepath:
+                    self.root_app.after(0, lambda: self.hide_progress(
+                        self.progress_bar, self.status_label, self.pdf_button
+                    ))
+                    self.root_app.after(0, lambda: messagebox.showinfo(
+                        "Éxito",
+                        f"El archivo [{os.path.basename(filepath)}]\n\n se ha generado exitosamente."
+                    ))
+                    try:
+                        if os.name == 'nt':
+                            os.startfile(filepath)
+                        elif os.name == 'posix':
+                            os.system(f'open "{filepath}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{filepath}"')
+                    except:
+                        pass
+                    return
+                else:
+                    result = None
+            else:
+                result = process_quarterly_data(scrap_df, ventas_df, horas_df, quarter, year)
+
             if result is None:
                 self.root_app.after(0, lambda: self.hide_progress(
                     self.progress_bar, self.status_label, self.pdf_button
@@ -144,7 +166,7 @@ class QuarterlyTab(BaseTab):
                     f"No se encontraron datos para:\n\nTrimestre: Q{quarter}\nAño: {year}"
                 ))
                 return
-            
+
             self.root_app.after(0, lambda: self.status_label.configure(text="🔍 Analizando contribuidores..."))
             
             contributors = export_quarterly_contributors_to_console(scrap_df, quarter, year, top_n=10)

@@ -13,26 +13,10 @@ from src.processors.data_loader import load_data
 from src.processors.monthly_processor import process_monthly_data
 from src.pdf_monthly_generator import generate_monthly_pdf_report
 from src.analysis.monthly_contributors import export_monthly_contributors_to_console, get_monthly_location_contributors
-
+from config import MONTHS_NUM_TO_ES
 
 class MonthlyTab(BaseTab):
     """Pestaña para generación de reportes mensuales"""
-    
-    # Diccionario de meses
-    MONTHS = {
-        1: "Enero",
-        2: "Febrero",
-        3: "Marzo",
-        4: "Abril",
-        5: "Mayo",
-        6: "Junio",
-        7: "Julio",
-        8: "Agosto",
-        9: "Septiembre",
-        10: "Octubre",
-        11: "Noviembre",
-        12: "Diciembre"
-    }
     
     def __init__(self, parent_frame, root_app):
         """
@@ -110,11 +94,11 @@ class MonthlyTab(BaseTab):
             max_month = 0
         
         # Crear lista de meses (nombre completo)
-        months_list = [f"{month:02d} - {self.MONTHS[month]}" for month in range(1, max_month + 1)]
+        months_list = [f"{month:02d} - {MONTHS_NUM_TO_ES[month]}" for month in range(1, max_month + 1)]
         self.month_combobox.configure(values=months_list)
-        
+
         if months_list:
-            self.month_combobox.set(f"{max_month:02d} - {self.MONTHS[max_month]}")
+            self.month_combobox.set(f"{max_month:02d} - {MONTHS_NUM_TO_ES[max_month]}")
         else:
             self.month_combobox.set("")
     
@@ -165,16 +149,42 @@ class MonthlyTab(BaseTab):
             
             # Paso 2: Procesar datos
             self.root_app.after(0, lambda: self.status_label.configure(text="⚙️ Procesando datos..."))
-            
-            result = process_monthly_data(scrap_df, ventas_df, horas_df, month, year)
-            
+
+            # Si la aplicación tiene un ReportService para mensual, usarlo (adapter generará el PDF)
+            service = getattr(self.root_app, 'report_service_monthly', None)
+            if service:
+                # El servicio devuelve la ruta al PDF o None
+                filepath = service.run_report({'month': month, 'year': year})
+                if filepath:
+                    # Ocultar progreso y notificar éxito
+                    self.root_app.after(0, lambda: self.hide_progress(
+                        self.progress_bar, self.status_label, self.pdf_button
+                    ))
+                    self.root_app.after(0, lambda: messagebox.showinfo(
+                        "Éxito",
+                        f"El archivo [{os.path.basename(filepath)}]\n\n se ha generado exitosamente."
+                    ))
+                    try:
+                        if os.name == 'nt':
+                            os.startfile(filepath)
+                        elif os.name == 'posix':
+                            os.system(f'open "{filepath}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{filepath}"')
+                    except:
+                        pass
+                    return
+                else:
+                    # Si service no generó nada, continuar con el flujo local (resultado None)
+                    result = None
+            else:
+                result = process_monthly_data(scrap_df, ventas_df, horas_df, month, year)
+
             if result is None:
                 self.root_app.after(0, lambda: self.hide_progress(
                     self.progress_bar, self.status_label, self.pdf_button
                 ))
                 self.root_app.after(0, lambda: messagebox.showwarning(
-                    "Sin datos", 
-                    f"No se encontraron datos para:\n\nMes: {self.MONTHS[month]}\nAño: {year}"
+                    "Sin datos",
+                    f"No se encontraron datos para:\n\nMes: {MONTHS_NUM_TO_ES[month]}\nAño: {year}"
                 ))
                 return
             

@@ -45,10 +45,16 @@ def process_monthly_data(scrap_df, ventas_df, horas_df, month, year):
     if scrap_month.empty and ventas_month.empty and horas_month.empty:
         return None
     
-    # Agregar columna de semana para agrupar por semanas del mes
-    scrap_month['Week'] = scrap_month['Create Date'].dt.strftime('%U').astype(int)
-    ventas_month['Week'] = ventas_month['Create Date'].dt.strftime('%U').astype(int)
-    horas_month['Week'] = horas_month['Trans Date'].dt.strftime('%U').astype(int)
+    # Agregar columna de semana para agrupar por semanas del mes (usar .loc para evitar SettingWithCopyWarning)
+    scrap_month = scrap_month.copy()
+    ventas_month = ventas_month.copy()
+    horas_month = horas_month.copy()
+
+    # Usar semana ISO (1-53) para alinear con TARGET_WEEK_RATES
+    # pandas .dt.isocalendar() devuelve un DataFrame con columna 'week'
+    scrap_month.loc[:, 'Week'] = scrap_month['Create Date'].dt.isocalendar().week.astype(int)
+    ventas_month.loc[:, 'Week'] = ventas_month['Create Date'].dt.isocalendar().week.astype(int)
+    horas_month.loc[:, 'Week'] = horas_month['Trans Date'].dt.isocalendar().week.astype(int)
     
     # Agrupar por semana
     scrap_weekly = scrap_month.groupby('Week')['Total Posted'].sum()

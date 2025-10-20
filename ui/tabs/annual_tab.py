@@ -81,7 +81,31 @@ class AnnualTab(BaseTab):
 
             # Paso 2: Procesar datos
             self.root_app.after(0, lambda: self.status_label.configure(text="⚙️ Procesando datos..."))
-            result = process_annual_data(scrap_df, ventas_df, horas_df, year)
+
+            service = getattr(self.root_app, 'report_service_annual', None)
+            if service:
+                filepath = service.run_report({'year': year})
+                if filepath:
+                    self.root_app.after(0, lambda: self.hide_progress(
+                        self.progress_bar, self.status_label, self.pdf_button
+                    ))
+                    self.root_app.after(0, lambda: messagebox.showinfo(
+                        "Éxito",
+                        f"El archivo [{os.path.basename(filepath)}]\n\n se ha generado exitosamente."
+                    ))
+                    try:
+                        if os.name == 'nt':
+                            os.startfile(filepath)
+                        elif os.name == 'posix':
+                            os.system(f'open "{filepath}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{filepath}"')
+                    except:
+                        pass
+                    return
+                else:
+                    result = None
+            else:
+                result = process_annual_data(scrap_df, ventas_df, horas_df, year)
+
             if result is None:
                 self.root_app.after(0, lambda: self.hide_progress(
                     self.progress_bar, self.status_label, self.pdf_button

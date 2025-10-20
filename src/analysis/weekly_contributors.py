@@ -28,7 +28,7 @@ def get_top_contributors_by_week(scrap_df, week_number, year, top_n=10):
     scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'])
     
     # Agregar columnas de semana y año
-    scrap_df['Week'] = scrap_df['Create Date'].dt.strftime('%U').astype(int)
+    scrap_df['Week'] = scrap_df['Create Date'].dt.isocalendar().week.astype(int)
     scrap_df['Year'] = scrap_df['Create Date'].dt.year
     
     # Filtrar por semana específica
@@ -139,7 +139,7 @@ def get_weekly_location_contributors(scrap_df, week_number, year, top_n=10):
     scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'])
     
     # Agregar semana y año
-    scrap_df['Week'] = scrap_df['Create Date'].dt.strftime('%U').astype(int)
+    scrap_df['Week'] = scrap_df['Create Date'].dt.isocalendar().week.astype(int)
     scrap_df['Year'] = scrap_df['Create Date'].dt.year
     
     # Filtrar por semana específica
@@ -197,3 +197,21 @@ def get_weekly_location_contributors(scrap_df, week_number, year, top_n=10):
     location_contrib = pd.concat([location_contrib, total_row], ignore_index=True)
     
     return location_contrib
+
+
+def get_weekly_contributors(scrap_df, week, year, top_n=10):
+    """
+    Wrapper uniforme para obtener los principales contribuidores semanales.
+    Esta función expone el nombre esperado por el ReportService/demo y
+    delega en la implementación actual get_top_contributors_by_week.
+
+    Args:
+        scrap_df (DataFrame): DataFrame con datos de scrap
+        week (int): Número de semana
+        year (int): Año
+        top_n (int): Número de principales contribuidores
+
+    Returns:
+        DataFrame: DataFrame con los principales contribuidores o None
+    """
+    return get_top_contributors_by_week(scrap_df, week, year, top_n=top_n)

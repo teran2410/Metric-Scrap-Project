@@ -174,11 +174,11 @@ def get_annual_weeks_data(scrap_df, ventas_df, horas_df, year):
         scrap_df['Total Posted'] = scrap_df['Total Posted'] * -1
     
     # Agregar columnas de semana y año
-    scrap_df['Week'] = scrap_df['Create Date'].dt.strftime('%U').astype(int)
+    scrap_df['Week'] = scrap_df['Create Date'].dt.isocalendar().week.astype(int)
     scrap_df['Year'] = scrap_df['Create Date'].dt.year
-    ventas_df['Week'] = ventas_df['Create Date'].dt.strftime('%U').astype(int)
+    ventas_df['Week'] = ventas_df['Create Date'].dt.isocalendar().week.astype(int)
     ventas_df['Year'] = ventas_df['Create Date'].dt.year
-    horas_df['Week'] = horas_df['Trans Date'].dt.strftime('%U').astype(int)
+    horas_df['Week'] = horas_df['Trans Date'].dt.isocalendar().week.astype(int)
     horas_df['Year'] = horas_df['Trans Date'].dt.year
     
     # Filtrar por año

@@ -1,5 +1,5 @@
 - Utiliza Python por defecto.
-- Utiliza customtkinter para crear las aplicaciones de escritorio.
+- Utiliza customtkinter para la ui.
 - Haz uso de buenas prácticas.
 - Siempre usa snake case para el nombre de las variables.
 - Refactoriza el código siempre que se pueda.

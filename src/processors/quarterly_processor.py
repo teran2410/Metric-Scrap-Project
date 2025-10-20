@@ -46,9 +46,13 @@ def process_quarterly_data(scrap_df, ventas_df, horas_df, quarter, year):
         return None
     
     # Agregar columna de mes para agrupar por meses del trimestre
-    scrap_quarter['Month'] = scrap_quarter['Create Date'].dt.month
-    ventas_quarter['Month'] = ventas_quarter['Create Date'].dt.month
-    horas_quarter['Month'] = horas_quarter['Trans Date'].dt.month
+    scrap_quarter = scrap_quarter.copy()
+    ventas_quarter = ventas_quarter.copy()
+    horas_quarter = horas_quarter.copy()
+
+    scrap_quarter.loc[:, 'Month'] = scrap_quarter['Create Date'].dt.month
+    ventas_quarter.loc[:, 'Month'] = ventas_quarter['Create Date'].dt.month
+    horas_quarter.loc[:, 'Month'] = horas_quarter['Trans Date'].dt.month
     
     # Agrupar por mes
     scrap_monthly = scrap_quarter.groupby('Month')['Total Posted'].sum()

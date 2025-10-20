@@ -161,37 +161,62 @@ class CustomTab(BaseTab):
                 ))
                 return
 
-            # Paso 2: Procesar datos
+            # Paso 2: Procesar datos y generar reporte via ReportService si está disponible
             self.root_app.after(0, lambda: self.status_label.configure(text="⚙️ Procesando datos..."))
-            result = process_custom_data(scrap_df, ventas_df, horas_df, start_date, end_date)
-            if result is None:
-                self.root_app.after(0, lambda: self.hide_progress(
-                    self.progress_bar, self.status_label, self.pdf_button
-                ))
-                self.root_app.after(0, lambda: messagebox.showwarning(
-                    "Sin datos",
-                    f"No se encontraron datos para el periodo:\n{start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}"
-                ))
-                return
 
-            # Paso 3: Analizar contribuidores
-            self.root_app.after(0, lambda: self.status_label.configure(text="🔍 Analizando contribuidores..."))
-            contributors = get_top_contributors_custom(scrap_df, start_date, end_date)
-            reasons = get_scrap_reasons_custom(scrap_df, start_date, end_date)
+            service = getattr(self.root_app, 'report_service_custom', None)
+            if service:
+                # ReportService espera claves start_date y end_date (ya normalizamos antes)
+                filepath = service.run_report({'start_date': start_date, 'end_date': end_date})
+                if filepath:
+                    self.root_app.after(0, lambda: self.hide_progress(
+                        self.progress_bar, self.status_label, self.pdf_button
+                    ))
+                    self.root_app.after(0, lambda: messagebox.showinfo(
+                        "Éxito",
+                        f"El archivo [{os.path.basename(filepath)}]\n\n se ha generado exitosamente."
+                    ))
+                    try:
+                        if os.name == 'nt':
+                            os.startfile(filepath)
+                        elif os.name == 'posix':
+                            os.system(f'open "{filepath}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{filepath}"')
+                    except:
+                        pass
+                    return
+                else:
+                    # continuar con el flujo local
+                    result = None
+            else:
+                result = process_custom_data(scrap_df, ventas_df, horas_df, start_date, end_date)
+                if result is None:
+                    self.root_app.after(0, lambda: self.hide_progress(
+                        self.progress_bar, self.status_label, self.pdf_button
+                    ))
+                    self.root_app.after(0, lambda: messagebox.showwarning(
+                        "Sin datos",
+                        f"No se encontraron datos para el periodo:\n{start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}"
+                    ))
+                    return
 
-            # Paso 4: Generar PDF
-            self.root_app.after(0, lambda: self.status_label.configure(text="📄 Generando PDF..."))
-            filename = f"Scrap_Rate_{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}.pdf"
-            filepath = os.path.join("reports", filename)
-            
-            create_custom_report(
-                result,
-                contributors,
-                reasons,
-                start_date,
-                end_date,
-                filepath
-            )
+                # Paso 3: Analizar contribuidores
+                self.root_app.after(0, lambda: self.status_label.configure(text="🔍 Analizando contribuidores..."))
+                contributors = get_top_contributors_custom(scrap_df, start_date, end_date)
+                reasons = get_scrap_reasons_custom(scrap_df, start_date, end_date)
+
+                # Paso 4: Generar PDF
+                self.root_app.after(0, lambda: self.status_label.configure(text="📄 Generando PDF..."))
+                filename = f"Scrap_Rate_{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}.pdf"
+                filepath = os.path.join("reports", filename)
+                
+                create_custom_report(
+                    result,
+                    contributors,
+                    reasons,
+                    start_date,
+                    end_date,
+                    filepath
+                )
 
             # Ocultar progreso
             self.root_app.after(0, lambda: self.hide_progress(
