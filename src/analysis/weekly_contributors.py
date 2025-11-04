@@ -4,16 +4,18 @@ weekly_contributors.py - Módulo para análisis de principales contribuidores de
 
 import pandas as pd
 from colorama import Fore, Style
+from config import get_week_number_vectorized
 
 
 def get_top_contributors_by_week(scrap_df, week_number, year, top_n=10):
     """
-    Obtiene los principales contribuidores de scrap para una semana específica
+    Obtiene los principales contribuidores de scrap para una semana específica.
+    Usa semanas domingo-sábado según calendario fiscal de NavicoGroup.
     IMPORTANTE: Devuelve los items con MAYOR monto total en dólares
     
     Args:
         scrap_df (DataFrame): DataFrame con datos de scrap
-        week_number (int): Número de semana a procesar
+        week_number (int): Número de semana a procesar (domingo-sábado, 1-53)
         year (int): Año a procesar
         top_n (int): Número de principales contribuidores a mostrar (default: 10)
         
@@ -27,8 +29,8 @@ def get_top_contributors_by_week(scrap_df, week_number, year, top_n=10):
     # Convertir columnas de fecha a datetime
     scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'])
     
-    # Agregar columnas de semana y año
-    scrap_df['Week'] = scrap_df['Create Date'].dt.isocalendar().week.astype(int)
+    # Agregar columnas de semana DOMINGO-SÁBADO y año (VECTORIZADO)
+    scrap_df['Week'] = get_week_number_vectorized(scrap_df['Create Date'], year=year)
     scrap_df['Year'] = scrap_df['Create Date'].dt.year
     
     # Filtrar por semana específica
@@ -120,11 +122,12 @@ def export_contributors_to_console(scrap_df, week, year, top_n=10):
 
 def get_weekly_location_contributors(scrap_df, week_number, year, top_n=10):
     """
-    Obtiene las principales celdas/ubicaciones contribuidoras de scrap para una semana específica
+    Obtiene las principales celdas/ubicaciones contribuidoras de scrap para una semana específica.
+    Usa semanas domingo-sábado según calendario fiscal de NavicoGroup.
     
     Args:
         scrap_df (DataFrame): DataFrame con datos de scrap
-        week_number (int): Número de semana a procesar
+        week_number (int): Número de semana a procesar (domingo-sábado, 1-53)
         year (int): Año a procesar
         top_n (int): Número de celdas principales a mostrar (default: 10)
         
@@ -138,8 +141,8 @@ def get_weekly_location_contributors(scrap_df, week_number, year, top_n=10):
     # Convertir fecha
     scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'])
     
-    # Agregar semana y año
-    scrap_df['Week'] = scrap_df['Create Date'].dt.isocalendar().week.astype(int)
+    # Agregar semana DOMINGO-SÁBADO y año (VECTORIZADO)
+    scrap_df['Week'] = get_week_number_vectorized(scrap_df['Create Date'], year=year)
     scrap_df['Year'] = scrap_df['Create Date'].dt.year
     
     # Filtrar por semana específica

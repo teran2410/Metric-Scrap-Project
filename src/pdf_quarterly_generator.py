@@ -53,6 +53,7 @@ COLOR_TOTAL = '#9DB4C0'        # Azul grisáceo
 COLOR_TEXT = '#333333'         # Gris carbón
 COLOR_BAR = '#3A7CA5'          # Azul petróleo
 COLOR_BG_CONTRIB = '#E1ECF4'   # Azul muy claro para contribuidores
+COLOR_BAR_EXCEED = '#7D8597'   # Gris azulado para filas que exceden target
 
 
 def generate_quarterly_pdf_report(df, contributors_df, quarter, year, scrap_df=None, output_folder='reports'):
@@ -113,7 +114,7 @@ def generate_quarterly_pdf_report(df, contributors_df, quarter, year, scrap_df=N
     title = Paragraph("REPORTE TRIMESTRAL DE SCRAP RATE", title_style)
     elements.append(title)
 
-    subtitle_text = f"{quarter_name} {year} | Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+    subtitle_text = f"{quarter_name} {year} | Reporte generado automáticamente por Metric Scrap System – © 2025 Oscar Teran"
     subtitle = Paragraph(subtitle_text, subtitle_style)
     elements.append(subtitle)
     elements.append(Spacer(1, 0.3 * inch))
@@ -127,15 +128,15 @@ def generate_quarterly_pdf_report(df, contributors_df, quarter, year, scrap_df=N
 
     for index, row in df.iterrows():
         row_data = []
-        month_value = None  # Variable para guardar el mes
-    
+        month_value = None
+
         for col in df.columns:
             value = row[col]
 
             # Mes traducido
             if col == 'Month':
                 if isinstance(value, int):
-                    month_value = value  # Guardar el mes para usarlo después
+                    month_value = value
                     row_data.append(MONTHS_ES.get(value, str(value)))
                 else:
                     row_data.append(str(value))
@@ -158,7 +159,36 @@ def generate_quarterly_pdf_report(df, contributors_df, quarter, year, scrap_df=N
             else:
                 row_data.append(str(value) if value != '' else '')
 
-        data.append(row_data)  # ← Movido DENTRO del loop, sin agregar target_rate extra
+        data.append(row_data)
+
+    # Calcular totales
+    try:
+        total_scrap = float(df['Scrap'].sum()) if 'Scrap' in df.columns else 0.0
+    except Exception:
+        total_scrap = 0.0
+    try:
+        total_hrs = float(df['Hrs Prod.'].sum()) if 'Hrs Prod.' in df.columns else 0.0
+    except Exception:
+        total_hrs = 0.0
+    try:
+        total_sales = float(df['$ Venta (dls)'].sum()) if '$ Venta (dls)' in df.columns else 0.0
+    except Exception:
+        total_sales = 0.0
+
+    total_rate = (total_scrap / total_hrs) if total_hrs > 0 else 0.0
+
+    # Añadir fila TOTAL
+    total_row = [
+        'TOTAL',
+        '',
+        '',
+        f"${total_scrap:,.2f}",
+        f"{total_hrs:.2f}",
+        f"${total_sales:,.0f}",
+        f"{total_rate:.2f}",
+        ''
+    ]
+    data.append(total_row)
 
     table = Table(data, repeatRows=1)
     table_style = TableStyle([
@@ -187,6 +217,20 @@ def generate_quarterly_pdf_report(df, contributors_df, quarter, year, scrap_df=N
         ('TOPPADDING', (0, 1), (-1, -1), 6),
         ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
     ])
+
+    # Colorear filas que exceden el target
+    for i in range(1, len(data) - 1):
+        try:
+            rate_str = str(data[i][6])
+            target_str = str(data[i][7])
+            rate = float(rate_str.replace('$', '').replace(',', ''))
+            target = float(target_str.replace('$', '').replace(',', ''))
+            if rate > target:
+                table_style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor(COLOR_BAR_EXCEED))
+                table_style.add('TEXTCOLOR', (0, i), (-1, i), colors.white)
+        except Exception:
+            pass
+
     table.setStyle(table_style)
     elements.append(table)
 
@@ -254,19 +298,6 @@ def generate_quarterly_pdf_report(df, contributors_df, quarter, year, scrap_df=N
 
         contrib_table.setStyle(contrib_table_style)
         elements.append(contrib_table)
-
-        # Pie de página
-        elements.append(Spacer(1, 0.3 * inch))
-        footer_style = ParagraphStyle(
-            'Footer',
-            parent=styles['Normal'],
-            fontSize=8,
-            textColor=colors.grey,
-            alignment=TA_RIGHT
-        )
-        footer_text = "Reporte generado automáticamente por Metric Scrap System – © 2025 Oscar Teran"
-        footer = Paragraph(footer_text, footer_style)
-        elements.append(footer)
 
     # ==============================
     # Construcción final del PDF

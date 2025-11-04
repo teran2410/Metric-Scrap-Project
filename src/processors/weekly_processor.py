@@ -3,17 +3,18 @@ Módulo para el procesamiento de datos de Scrap, Ventas y Horas
 """
 
 import pandas as pd
-from config import TARGET_WEEK_RATES
+from config import TARGET_WEEK_RATES, get_week_number_vectorized
 
 def process_weekly_data(scrap_df, ventas_df, horas_df, week_number, year):
     """
-    Procesa los datos de una semana específica y calcula el rate de scrap
+    Procesa los datos de una semana específica y calcula el rate de scrap.
+    Usa semanas domingo-sábado según calendario fiscal de NavicoGroup.
     
     Args:
         scrap_df (DataFrame): DataFrame con datos de scrap
         ventas_df (DataFrame): DataFrame con datos de ventas
         horas_df (DataFrame): DataFrame con datos de horas
-        week_number (int): Número de semana a procesar
+        week_number (int): Número de semana a procesar (1-53, domingo a sábado)
         year (int): Año a procesar
         
     Returns:
@@ -28,24 +29,18 @@ def process_weekly_data(scrap_df, ventas_df, horas_df, week_number, year):
     # Convertir scrap a positivo (multiplicar por -1)
     scrap_df['Total Posted'] = scrap_df['Total Posted'] * -1
     
-    # Agregar columnas de semana (ISO 1-53) y año
-    scrap_df['Week'] = scrap_df['Create Date'].dt.isocalendar().week.astype(int)
+    # Agregar columnas de semana DOMINGO-SÁBADO y año (VECTORIZADO)
+    scrap_df['Week'] = get_week_number_vectorized(scrap_df['Create Date'], year=year)
     scrap_df['Year'] = scrap_df['Create Date'].dt.year
-    ventas_df['Week'] = ventas_df['Create Date'].dt.isocalendar().week.astype(int)
+    ventas_df['Week'] = get_week_number_vectorized(ventas_df['Create Date'], year=year)
     ventas_df['Year'] = ventas_df['Create Date'].dt.year
-    horas_df['Week'] = horas_df['Trans Date'].dt.isocalendar().week.astype(int)
+    horas_df['Week'] = get_week_number_vectorized(horas_df['Trans Date'], year=year)
     horas_df['Year'] = horas_df['Trans Date'].dt.year
     
-    # Normalizar week_number: aceptar tanto 0-index (strftime('%U')) como ISO (1-53)
-    if 1 <= week_number <= 53:
-        actual_week_number = week_number
-    elif 0 <= week_number <= 52:
-        # Probablemente 0-indexed: convertir a ISO
-        actual_week_number = week_number + 1
-    else:
-        actual_week_number = week_number
+    # Usar el número de semana directamente (ya no necesitamos conversión)
+    actual_week_number = week_number
 
-    # Filtrar por semana específica (usar semana ISO)
+    # Filtrar por semana específica (usar semana domingo-sábado)
     scrap_week = scrap_df[(scrap_df['Week'] == actual_week_number) & (scrap_df['Year'] == year)]
     ventas_week = ventas_df[(ventas_df['Week'] == actual_week_number) & (ventas_df['Year'] == year)]
     horas_week = horas_df[(horas_df['Week'] == actual_week_number) & (horas_df['Year'] == year)]
@@ -56,33 +51,31 @@ def process_weekly_data(scrap_df, ventas_df, horas_df, week_number, year):
     horas_daily = horas_week.groupby('Trans Date')['Actual Hours'].sum()
     
     # Si no hay datos en ninguna de las fuentes para la semana, devolver None
-    # para que el flujo superior pueda manejar la ausencia de datos.
     if scrap_daily.empty and ventas_daily.empty and horas_daily.empty:
         return None
 
-    # Crear lista de todos los días de la semana (Domingo a Sábado)
-    all_dates = pd.date_range(
-        start=scrap_daily.index.min() if not scrap_daily.empty else horas_daily.index.min(),
-        end=scrap_daily.index.max() if not scrap_daily.empty else horas_daily.index.max(),
-        freq='D'
-    )
+    # Obtener todas las fechas con datos
+    all_dates = sorted(set(scrap_daily.index) | set(horas_daily.index) | set(ventas_daily.index))
     
-    # Asegurar que tengamos todos los días de Domingo a Sábado
-    start_date = all_dates[0]
-    # Ajustar al domingo anterior si no empieza en domingo
-    days_since_sunday = start_date.weekday()
-    if days_since_sunday != 6:  # 6 = Domingo en Python (0=Lunes, 6=Domingo)
-        start_date = start_date - pd.Timedelta(days=(days_since_sunday + 1) % 7)
+    if not all_dates:
+        return None
     
+    # Encontrar el domingo de inicio de la semana
+    start_date = min(all_dates)
+    # Ajustar al domingo anterior si no empieza en domingo (weekday() 6=domingo)
+    days_since_sunday = (start_date.weekday() + 1) % 7  # Convertir a 0=domingo
+    if days_since_sunday != 0:
+        start_date = start_date - pd.Timedelta(days=days_since_sunday)
+    
+    # Crear rango de 7 días (domingo a sábado)
     week_dates = pd.date_range(start=start_date, periods=7, freq='D')
     
     # Crear DataFrame final
     result = pd.DataFrame(index=week_dates)
-    # Nombre del día en inglés (se puede traducir usando DAYS_ES si se desea)
     result['Day'] = result.index.strftime('%A')
     result['D'] = result.index.strftime('%d').astype(int)
-    # Semana ISO (1-53)
-    result['W'] = result.index.to_series().dt.isocalendar().week.astype(int).values
+    # Usar semana domingo-sábado (VECTORIZADO)
+    result['W'] = get_week_number_vectorized(result.index.to_series(), year=year).values
     result['M'] = result.index.to_series().dt.month.astype(int).values
 
     # Rellenar datos

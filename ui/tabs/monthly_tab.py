@@ -130,33 +130,18 @@ class MonthlyTab(BaseTab):
                 self.root_app.after(0, lambda: messagebox.showerror("Error", "Ingrese un año válido"))
                 return
             
-            # Paso 1: Cargar datos
+            # Paso 1: Mostrar progreso (ÚNICA actualización inicial)
             self.root_app.after(0, lambda: self.show_progress(
-                self.progress_bar, self.status_label, self.pdf_button, "⌛ Cargando datos..."
+                self.progress_bar, self.status_label, self.pdf_button, "⌛ Procesando reporte..."
             ))
             
-            scrap_df, ventas_df, horas_df = load_data()
-            
-            if scrap_df is None:
-                self.root_app.after(0, lambda: self.hide_progress(
-                    self.progress_bar, self.status_label, self.pdf_button
-                ))
-                self.root_app.after(0, lambda: messagebox.showerror(
-                    "Error", 
-                    "No se pudo cargar el archivo.\nVerifique que 'test pandas.xlsx' exista en la carpeta 'data/'"
-                ))
-                return
-            
-            # Paso 2: Procesar datos
-            self.root_app.after(0, lambda: self.status_label.configure(text="⚙️ Procesando datos..."))
-
             # Si la aplicación tiene un ReportService para mensual, usarlo (adapter generará el PDF)
             service = getattr(self.root_app, 'report_service_monthly', None)
             if service:
-                # El servicio devuelve la ruta al PDF o None
+                # El servicio carga sus propios datos y genera el PDF
                 filepath = service.run_report({'month': month, 'year': year})
                 if filepath:
-                    # Ocultar progreso y notificar éxito
+                    # Ocultar progreso y notificar éxito (ÚNICA actualización final)
                     self.root_app.after(0, lambda: self.hide_progress(
                         self.progress_bar, self.status_label, self.pdf_button
                     ))
@@ -173,10 +158,34 @@ class MonthlyTab(BaseTab):
                         pass
                     return
                 else:
-                    # Si service no generó nada, continuar con el flujo local (resultado None)
-                    result = None
+                    # Si service no generó nada, cargar datos y continuar con el flujo local
+                    scrap_df, ventas_df, horas_df = load_data()
+                    if scrap_df is None:
+                        self.root_app.after(0, lambda: self.hide_progress(
+                            self.progress_bar, self.status_label, self.pdf_button
+                        ))
+                        self.root_app.after(0, lambda: messagebox.showerror(
+                            "Error", 
+                            "No se pudo cargar el archivo.\nVerifique que 'test pandas.xlsx' exista en la carpeta 'data/'"
+                        ))
+                        return
             else:
-                result = process_monthly_data(scrap_df, ventas_df, horas_df, month, year)
+                # No hay servicio, cargar datos directamente
+                scrap_df, ventas_df, horas_df = load_data()
+                if scrap_df is None:
+                    self.root_app.after(0, lambda: self.hide_progress(
+                        self.progress_bar, self.status_label, self.pdf_button
+                    ))
+                    self.root_app.after(0, lambda: messagebox.showerror(
+                        "Error", 
+                        "No se pudo cargar el archivo.\nVerifique que 'test pandas.xlsx' exista en la carpeta 'data/'"
+                    ))
+                    return
+            
+            # Paso 2-4: Procesar, analizar y generar PDF (SIN actualizaciones intermedias)
+            # La UI ya muestra "Procesando reporte..."
+            
+            result = process_monthly_data(scrap_df, ventas_df, horas_df, month, year)
 
             if result is None:
                 self.root_app.after(0, lambda: self.hide_progress(
@@ -188,14 +197,9 @@ class MonthlyTab(BaseTab):
                 ))
                 return
             
-            # Paso 3: Analizar contribuidores
-            self.root_app.after(0, lambda: self.status_label.configure(text="🔍 Analizando contribuidores..."))
-            
+            # Analizar contribuidores y generar PDF sin actualizar UI
             contributors = export_monthly_contributors_to_console(scrap_df, month, year, top_n=10)
             locations = get_monthly_location_contributors(scrap_df, month, year, top_n=10)
-            
-            # Paso 4: Generar PDF
-            self.root_app.after(0, lambda: self.status_label.configure(text="📄 Generando PDF..."))
             
             filepath = generate_monthly_pdf_report(
                 result,
@@ -206,15 +210,13 @@ class MonthlyTab(BaseTab):
                 locations
             )
             
-            # Ocultar progreso
+            # ÚNICA actualización final: ocultar progreso
             self.root_app.after(0, lambda: self.hide_progress(
                 self.progress_bar, self.status_label, self.pdf_button
             ))
             
-            # Mostrar mensaje de éxito o error
+            # Mostrar mensaje de éxito o error (ÚNICA actualización)
             if filepath:
-                folder_path = os.path.dirname(filepath)
-                
                 self.root_app.after(0, lambda: messagebox.showinfo(
                     "Éxito",
                     f"El archivo [{os.path.basename(filepath)}]\n\n se ha generado exitosamente."

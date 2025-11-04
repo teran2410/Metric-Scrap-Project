@@ -6,7 +6,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.platypus import (
     SimpleDocTemplate, Table, TableStyle, Paragraph,
-    Spacer, PageBreak, Image
+    Spacer, PageBreak
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
@@ -17,16 +17,29 @@ from config import (
     COLOR_HEADER, COLOR_TEXT, COLOR_TARGET_LINE, COLOR_TOTAL, COLOR_ROW
 )
 import os
-import matplotlib
-matplotlib.use("Agg") # Usar backend no interactivo
-import matplotlib.pyplot as plt
+import gc
+import logging
+
+# Configurar logger
+logger = logging.getLogger(__name__)
 
 def generate_monthly_pdf_report(df, contributors_df, month, year, scrap_df=None, locations_df=None, output_folder='reports'):
     """
     Genera un PDF con el reporte mensual de Scrap Rate
     """
+    logger.info(f"Iniciando generación PDF mensual: {MONTHS_NUM_TO_ES.get(month, 'Mes')} {year}")
+    
     if df is None:
+        logger.warning("DataFrame principal es None, abortando generación")
         return None
+    
+    # Limpiar todas las figuras de matplotlib abiertas
+    try:
+        import matplotlib.pyplot as plt
+        plt.close('all')
+        logger.debug("Figuras matplotlib cerradas")
+    except Exception as e:
+        logger.warning(f"Error al cerrar figuras matplotlib: {e}")
 
     # Crear carpeta de reportes si no existe
     if not os.path.exists(output_folder):
@@ -81,22 +94,27 @@ def generate_monthly_pdf_report(df, contributors_df, month, year, scrap_df=None,
     subtitle = Paragraph(subtitle_text, subtitle_style)
     elements.append(subtitle)
     elements.append(Spacer(1, 0.3 * inch))
-
-    # Determinar si la semana está dentro de la meta comparando el rate total vs target semanal
+    
+    # Determinar si el periodo mensual cumple la meta comparando el rate total vs target
     target_rate = df['Target Rate'].iloc[0] if 'Target Rate' in df.columns else 0.0
     total_rate = df['Rate'].iloc[-1]
     meets_target = total_rate <= target_rate
-    target_status = "✅ Dentro de la Meta" if meets_target else "❌ Fuera de la Meta"
-    target_style = ParagraphStyle(
-        'TargetStatus',
-        parent=styles['Heading2'],
-        fontSize=16,
-        textColor=colors.HexColor(COLOR_TEXT),
-        spaceAfter=20,
+
+    # Encabezado grande indicando cumplimiento (DENTRO DE META / FUERA DE META)
+    header_text = "DENTRO DE META" if meets_target else "FUERA DE META"
+    header_color = colors.HexColor("#2E8B57") if meets_target else colors.red
+    header_style = ParagraphStyle(
+        'TargetHeader',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=header_color,
+        spaceAfter=12,
         alignment=TA_CENTER,
         fontName='Helvetica-Bold'
-        )
+    )
 
+    elements.append(Paragraph(header_text, header_style))
+    elements.append(Spacer(1, 0.2 * inch))
 
     # ==============================================
     # PRIMERA TABLA: REPORTE MENSUAL POR SEMANAS
@@ -143,36 +161,7 @@ def generate_monthly_pdf_report(df, contributors_df, month, year, scrap_df=None,
     table.setStyle(table_style)
     elements.append(table)
 
-    # ==============================================
-    # GRÁFICA: SCRAP RATE POR SEMANA DEL MES
-    # ==============================================
-    weeks = df['Week'][:-1]
-    rates = df['Rate'][:-1]
-    target = df['Target Rate'].iloc[0] if 'Target Rate' in df.columns else 0.0
-
-    fig, ax1 = plt.subplots(figsize=(8, 3))
-    bars = ax1.bar(weeks, rates, color=COLOR_BAR)
-
-    for bar, rate in zip(bars, rates):
-        if rate > target:
-            bar.set_color(COLOR_BAR_EXCEED)
-        ax1.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
-                 f"{rate:.2f}", ha='center', va='bottom', fontsize=9,
-                 color=COLOR_TEXT, fontweight='bold')
-
-    ax1.axhline(y=target, color=COLOR_TARGET_LINE, linewidth=2, linestyle='--')
-    ax1.set_xlabel("Semana")
-    ax1.set_ylabel("Rate")
-    plt.tight_layout()
-
-    # Guardar imagen temporal
-    chart_path = os.path.join(output_folder, "temp_chart_monthly.png")
-    plt.savefig(chart_path, dpi=100)
-    plt.close()
-
-    # Insertar gráfica
-    img = Image(chart_path, width=7 * inch, height=2.5 * inch)
-    elements.append(img)
+    # Insertar espacio entre tabla y sección de contribuidores
     elements.append(Spacer(1, 0.3 * inch))
 
     # ==============================================
@@ -296,22 +285,24 @@ def generate_monthly_pdf_report(df, contributors_df, month, year, scrap_df=None,
                 # Ajustar layout
                 plt.tight_layout()
                 
-                # Guardar imagen temporal
-                chart_pareto_path = os.path.join(output_folder, "temp_monthly_pareto.png")
-                plt.savefig(chart_pareto_path, dpi=100, bbox_inches='tight')
-                plt.close()
-                
-                # Insertar gráfica en el PDF
-                img_pareto = Image(chart_pareto_path, width=8 * inch, height=4 * inch)
-                elements.append(img_pareto)
+                # Para evitar gráficas en la versión actual, omitimos la inserción
+                # de la figura y continuamos con la tabla de contribuidores.
+                plt.close(fig)
 
     # Construir PDF
+    logger.debug("Construyendo documento PDF")
     doc.build(elements)
+    logger.info(f"PDF generado exitosamente: {filepath}")
 
-    # Limpiar imágenes temporales
-    if os.path.exists(chart_path):
-        os.remove(chart_path)
-    if 'chart_pareto_path' in locals() and os.path.exists(chart_pareto_path):
-        os.remove(chart_pareto_path)
+    # Limpiar recursos y forzar garbage collection
+    try:
+        import matplotlib.pyplot as plt
+        plt.close('all')
+        logger.debug("Recursos matplotlib liberados")
+    except Exception as e:
+        logger.warning(f"Error al limpiar matplotlib: {e}")
+    
+    gc.collect()
+    logger.debug("Garbage collection ejecutado")
 
     return filepath

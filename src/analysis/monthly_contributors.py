@@ -3,11 +3,13 @@ monthly_contributors.py - Análisis de contribuidores mensuales de scrap
 """
 
 import pandas as pd
+from config import WEEK_MONTH_MAPPING_2025, get_week_number_vectorized
 
 
 def get_monthly_contributors(scrap_df, month, year, top_n=10):
     """
-    Obtiene los principales contribuidores de scrap para un mes específico
+    Obtiene los principales contribuidores de scrap para un mes específico.
+    Usa semanas domingo-sábado según calendario fiscal de NavicoGroup.
     
     Args:
         scrap_df (DataFrame): DataFrame con datos de scrap
@@ -25,12 +27,33 @@ def get_monthly_contributors(scrap_df, month, year, top_n=10):
     # Convertir columnas de fecha a datetime
     scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'])
     
-    # Agregar columnas de mes y año
+    # Agregar columnas de mes, año y semana DOMINGO-SÁBADO (VECTORIZADO)
     scrap_df['Month'] = scrap_df['Create Date'].dt.month
     scrap_df['Year'] = scrap_df['Create Date'].dt.year
+    scrap_df['Week'] = get_week_number_vectorized(scrap_df['Create Date'], year=year)
     
-    # Filtrar por mes específico
-    scrap_month = scrap_df[(scrap_df['Month'] == month) & (scrap_df['Year'] == year)]
+    # Filtrar por año
+    scrap_year = scrap_df[scrap_df['Year'] == year]
+    
+    # Determinar las semanas del mes usando el mapeo fiscal si está disponible
+    weeks_in_month = None
+    if year == 2025 and WEEK_MONTH_MAPPING_2025 and month in WEEK_MONTH_MAPPING_2025:
+        # Usar el mapeo fiscal explícito (eliminar duplicados preservando orden)
+        seen = set()
+        weeks_in_month = []
+        for w in WEEK_MONTH_MAPPING_2025[month]:
+            if w not in seen:
+                seen.add(w)
+                weeks_in_month.append(int(w))
+    else:
+        # Fallback: detectar automáticamente las semanas que tocan el mes
+        weeks_in_month = scrap_year[scrap_year['Month'] == month]['Week'].unique()
+    
+    if not weeks_in_month or len(weeks_in_month) == 0:
+        return None
+    
+    # Filtrar todas las filas de esas semanas (incluye días fuera del mes)
+    scrap_month = scrap_year[scrap_year['Week'].isin(weeks_in_month)].copy()
     
     if scrap_month.empty:
         return None
@@ -118,78 +141,70 @@ def export_monthly_contributors_to_console(scrap_df, month, year, top_n=10):
 
 def get_monthly_location_contributors(scrap_df, month, year, top_n=10):
     """
-    Obtiene las principales celdas/ubicaciones contribuidoras de scrap para un mes específico
-    
-    Args:
-        scrap_df (DataFrame): DataFrame con datos de scrap
-        month (int): Número de mes a procesar (1-12)
-        year (int): Año a procesar
-        top_n (int): Número de celdas principales a mostrar (default: 10)
-        
-    Returns:
-        DataFrame: DataFrame con las celdas contribuidoras ordenadas por monto
+    Obtiene las principales celdas/ubicaciones contribuidoras de scrap para un mes específico.
+    Usa semanas domingo-sábado según calendario fiscal de NavicoGroup.
     """
-    
-    # Hacer copia
     scrap_df = scrap_df.copy()
-    
-    # Convertir fecha
     scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'])
-    
-    # Agregar mes y año
     scrap_df['Month'] = scrap_df['Create Date'].dt.month
     scrap_df['Year'] = scrap_df['Create Date'].dt.year
+    scrap_df['Week'] = get_week_number_vectorized(scrap_df['Create Date'], year=year)
     
-    # Filtrar por mes específico
-    scrap_month = scrap_df[(scrap_df['Month'] == month) & (scrap_df['Year'] == year)]
+    # Filtrar por año
+    scrap_year = scrap_df[scrap_df['Year'] == year]
+    
+    # Determinar las semanas del mes usando el mapeo fiscal si está disponible
+    weeks_in_month = None
+    if year == 2025 and WEEK_MONTH_MAPPING_2025 and month in WEEK_MONTH_MAPPING_2025:
+        # Usar el mapeo fiscal explícito (eliminar duplicados preservando orden)
+        seen = set()
+        weeks_in_month = []
+        for w in WEEK_MONTH_MAPPING_2025[month]:
+            if w not in seen:
+                seen.add(w)
+                weeks_in_month.append(int(w))
+    else:
+        # Fallback: detectar automáticamente las semanas que tocan el mes
+        weeks_in_month = scrap_year[scrap_year['Month'] == month]['Week'].unique()
+    
+    if not weeks_in_month or len(weeks_in_month) == 0:
+        return None
+    
+    # Filtrar todas las filas de esas semanas
+    scrap_month = scrap_year[scrap_year['Week'].isin(weeks_in_month)].copy()
     
     if scrap_month.empty:
         return None
     
-    # Verificar que exista columna Location
     if 'Location' not in scrap_month.columns:
         return None
     
-    # Convertir a valores positivos
-    scrap_month = scrap_month.copy()
     scrap_month['Total Posted'] = scrap_month['Total Posted'].abs()
     
-    # Agrupar por Location (Celda)
     location_contrib = scrap_month.groupby('Location', as_index=False).agg({
         'Total Posted': 'sum'
     })
     
-    # Ordenar de mayor a menor
     location_contrib = location_contrib.sort_values('Total Posted', ascending=False)
     location_contrib = location_contrib.reset_index(drop=True)
-    
-    # Tomar top N
     location_contrib = location_contrib.head(top_n)
     
-    # Calcular porcentaje acumulado
-    total_amount = location_contrib['Total Posted'].sum()
-    if total_amount > 0:
-        location_contrib['Cumulative %'] = (
-            location_contrib['Total Posted'].cumsum() / total_amount * 100
-        ).round(2)
-    else:
-        location_contrib['Cumulative %'] = 0.0
+    total_posted = location_contrib['Total Posted'].sum()
+    location_contrib['Cumulative %'] = (location_contrib['Total Posted'].cumsum() / total_posted * 100).round(2)
     
-    # Agregar ranking
     location_contrib.insert(0, 'Ranking', range(1, len(location_contrib) + 1))
     
-    # Renombrar columnas
     location_contrib = location_contrib.rename(columns={
         'Location': 'Celda',
-        'Total Posted': 'Monto (dls)'
+        'Total Posted': 'Monto (dls)',
+        'Cumulative %': '% Acumulado'
     })
     
-    # Agregar fila de totales
     total_row = pd.DataFrame({
         'Ranking': ['TOTAL'],
         'Celda': [''],
         'Monto (dls)': [location_contrib['Monto (dls)'].sum()],
-        'Cumulative %': ['']
+        '% Acumulado': ['']
     })
     
     location_contrib = pd.concat([location_contrib, total_row], ignore_index=True)
