@@ -21,14 +21,17 @@ def process_custom_data(scrap_df, ventas_df, horas_df, start_date, end_date):
         DataFrame: DataFrame con el reporte del periodo o None si no hay datos
     """
     # Validar que los DataFrames no estén vacíos
-    if scrap_df is None or scrap_df.empty:
-        print("⚠️ scrap_df está vacío")
+    if scrap_df is None:
         return None
-    if ventas_df is None or ventas_df.empty:
-        print("⚠️ ventas_df está vacío")
+    if scrap_df.empty:
         return None
-    if horas_df is None or horas_df.empty:
-        print("⚠️ horas_df está vacío")
+    if ventas_df is None:
+        return None
+    if ventas_df.empty:
+        return None
+    if horas_df is None:
+        return None
+    if horas_df.empty:
         return None
     
     # Validar que existan las columnas necesarias
@@ -57,20 +60,24 @@ def process_custom_data(scrap_df, ventas_df, horas_df, start_date, end_date):
     ventas_df = ventas_df.dropna(subset=['Create Date'])
     horas_df = horas_df.dropna(subset=['Trans Date'])
     
+    # Convertir start_date y end_date a pd.Timestamp para comparación correcta
+    start_date_ts = pd.Timestamp(start_date)
+    end_date_ts = pd.Timestamp(end_date)
+    
     # Filtrar por rango de fechas
     scrap_filtered = scrap_df[
-        (scrap_df['Create Date'] >= start_date) & 
-        (scrap_df['Create Date'] <= end_date)
+        (scrap_df['Create Date'] >= start_date_ts) & 
+        (scrap_df['Create Date'] <= end_date_ts)
     ].copy()
     
     ventas_filtered = ventas_df[
-        (ventas_df['Create Date'] >= start_date) & 
-        (ventas_df['Create Date'] <= end_date)
+        (ventas_df['Create Date'] >= start_date_ts) & 
+        (ventas_df['Create Date'] <= end_date_ts)
     ].copy()
     
     horas_filtered = horas_df[
-        (horas_df['Trans Date'] >= start_date) & 
-        (horas_df['Trans Date'] <= end_date)
+        (horas_df['Trans Date'] >= start_date_ts) & 
+        (horas_df['Trans Date'] <= end_date_ts)
     ].copy()
     
     if scrap_filtered.empty and ventas_filtered.empty and horas_filtered.empty:

@@ -1,190 +1,534 @@
 """
-app.py - Interfaz gráfica principal (modularizada)
+app.py - Interfaz gráfica principal con PySide6
 """
 
-import customtkinter as ctk
-import os
-
-from ui.tabs.weekly_tab import WeeklyTab
-from ui.tabs.monthly_tab import MonthlyTab
-from ui.tabs.quarterly_tab import QuarterlyTab
-from ui.tabs.annual_tab import AnnualTab
-from ui.tabs.custom_tab import CustomTab
+import sys
+from datetime import datetime
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
+    QWidget, QLabel, QPushButton, QComboBox, QLineEdit, QDateEdit,
+    QProgressBar, QMessageBox, QFrame, QMenuBar
+)
+from PySide6.QtCore import Qt, QDate
+from PySide6.QtGui import QIcon
 
 from config import (
-    APP_TITLE, APP_WIDTH, APP_HEIGHT, 
-    APP_THEME, APP_COLOR_THEME, APP_ICON_PATH
+    APP_TITLE, APP_WIDTH, APP_HEIGHT, APP_ICON_PATH,
+    WEEK_MONTH_MAPPING_2025
 )
 
-# Importar report service y adapters si existen
-try:
-    from src.core.report_service import ReportService
-    from src.core.pdf_adapters.weekly_adapter import WeeklyPdfAdapter
-    from src.processors.data_loader import load_data as _load_data
-    from src.processors.weekly_processor import process_weekly_data as _process_weekly
-    from src.analysis.weekly_contributors import get_weekly_contributors as _analyze_weekly
-except Exception:
-    ReportService = None
-    WeeklyPdfAdapter = None
- 
-try:
-    from src.core.pdf_adapters.monthly_adapter import MonthlyPdfAdapter
-    from src.processors.monthly_processor import process_monthly_data as _process_monthly
-    from src.analysis.monthly_contributors import get_monthly_contributors as _analyze_monthly
-except Exception:
-    MonthlyPdfAdapter = None
-    _process_monthly = None
-    _analyze_monthly = None
+# Importar módulos modularizados
+from ui.report_thread import ReportThread
+from ui.theme_manager import ThemeManager
 
-try:
-    from src.core.pdf_adapters.quarterly_adapter import QuarterlyPdfAdapter
-    from src.processors.quarterly_processor import process_quarterly_data as _process_quarterly
-    from src.analysis.quarterly_contributors import get_quarterly_contributors as _analyze_quarterly
-except Exception:
-    QuarterlyPdfAdapter = None
-    _process_quarterly = None
-    _analyze_quarterly = None
 
-try:
-    from src.core.pdf_adapters.annual_adapter import AnnualPdfAdapter
-    from src.processors.anual_processor import process_anual_data as _process_annual
-    from src.analysis.annual_contributors import get_annual_contributors as _analyze_annual
-except Exception:
-    AnnualPdfAdapter = None
-    _process_annual = None
-    _analyze_annual = None
-
-try:
-    from src.core.pdf_adapters.custom_adapter import CustomPdfAdapter
-    from src.processors.custom_processor import process_custom_data as _process_custom
-    from src.analysis.custom_contributors import get_custom_contributors as _analyze_custom
-except Exception:
-    CustomPdfAdapter = None
-    _process_custom = None
-    _analyze_custom = None
-
-class ScrapRateApp(ctk.CTk):
-    """Aplicación principal para análisis de Scrap Rate"""
+class ScrapRateApp(QMainWindow):
+    """Aplicación principal para análisis de Scrap Rate con interfaz unificada"""
     
     def __init__(self):
         super().__init__()
         
-        # Configuración de la ventana
-        self.title(APP_TITLE)
-        self.geometry(f"{APP_WIDTH}x{APP_HEIGHT + 50}")
-        self.resizable(False, False)  # Tamaño fijo
+        # Estado del tema (True = oscuro, False = claro)
+        self.is_dark_mode = True
+        self.current_thread = None
         
-        # Configurar tema
-        ctk.set_appearance_mode(APP_THEME)
-        ctk.set_default_color_theme(APP_COLOR_THEME)
+        # Configuración ventana
+        self.setWindowTitle(APP_TITLE)
+        self.setFixedSize(600, 620)
         
-        # Configurar ícono
+        # Ícono
         self.setup_icon()
         
-        # Crear interfaz
-        self.create_ui()
+        # Menu bar
+        self.setup_menubar()
+        
+        # Widget central
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        
+        # Layout principal
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(30, 25, 30, 25)
+        main_layout.setSpacing(15)
+        
+        # Header con título
+        header_layout = QHBoxLayout()
+        header_layout.setSpacing(10)
+        
+        # Título (centrado)
+        title_container = QVBoxLayout()
+        title_container.setSpacing(2)
+        
+        title_label = QLabel("Análisis del Métrico de Scrap")
+        title_label.setAlignment(Qt.AlignCenter)
+        self.title_label = title_label
+        title_container.addWidget(title_label)
+        
+        subtitle_label = QLabel("Desarrollado por Oscar Teran")
+        subtitle_label.setAlignment(Qt.AlignCenter)
+        self.subtitle_label = subtitle_label
+        title_container.addWidget(subtitle_label)
+        
+        header_layout.addStretch()
+        header_layout.addLayout(title_container)
+        header_layout.addStretch()
+        
+        main_layout.addLayout(header_layout)
+        main_layout.addSpacing(5)
+        
+        # ========== BOTONES DE ACCESO RÁPIDO ==========
+        quick_actions_container = QFrame()
+        quick_actions_layout = QHBoxLayout(quick_actions_container)
+        quick_actions_layout.setContentsMargins(0, 0, 0, 0)
+        quick_actions_layout.setSpacing(10)
+        
+        quick_label = QLabel("Acceso Rápido:")
+        self.quick_label = quick_label
+        quick_actions_layout.addWidget(quick_label)
+        
+        # Calcular semana y mes actual
+        current_date = datetime.now()
+        last_week = current_date.isocalendar()[1] - 1
+        if last_week < 1:
+            last_week = 52
+        month_names = [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ]
+        current_month = month_names[current_date.month - 1]
+        
+        # Contenedor para botón de semana anterior + label
+        week_container = QVBoxLayout()
+        week_container.setSpacing(5)
+        
+        # Botón reporte semana anterior
+        this_week_btn = QPushButton("Semana Anterior")
+        this_week_btn.setFixedSize(180, 38)
+        this_week_btn.setStyleSheet("font-size: 10pt;")
+        this_week_btn.setCursor(Qt.PointingHandCursor)
+        this_week_btn.clicked.connect(self.generate_last_week_report)
+        self.this_week_btn = this_week_btn
+        week_container.addWidget(this_week_btn)
+        
+        # Label con número de semana
+        week_number_label = QLabel(f"Semana {last_week}")
+        week_number_label.setAlignment(Qt.AlignCenter)
+        week_number_label.setStyleSheet("font-size: 9pt; color: #9CA3AF;")
+        self.week_number_label = week_number_label
+        week_container.addWidget(week_number_label)
+        
+        quick_actions_layout.addLayout(week_container)
+        
+        # Contenedor para botón de este mes + label
+        month_container = QVBoxLayout()
+        month_container.setSpacing(5)
+        
+        # Botón reporte este mes
+        this_month_btn = QPushButton("Este Mes")
+        this_month_btn.setFixedSize(180, 38)
+        this_month_btn.setStyleSheet("font-size: 10pt;")
+        this_month_btn.setCursor(Qt.PointingHandCursor)
+        this_month_btn.clicked.connect(self.generate_this_month_report)
+        self.this_month_btn = this_month_btn
+        month_container.addWidget(this_month_btn)
+        
+        # Label con nombre del mes
+        month_name_label = QLabel(current_month)
+        month_name_label.setAlignment(Qt.AlignCenter)
+        month_name_label.setStyleSheet("font-size: 9pt; color: #9CA3AF;")
+        self.month_name_label = month_name_label
+        month_container.addWidget(month_name_label)
+        
+        quick_actions_layout.addLayout(month_container)
+        
+        quick_actions_layout.addStretch()
+        main_layout.addWidget(quick_actions_container)
+        
+        # Separador
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Sunken)
+        self.separator = separator
+        main_layout.addWidget(separator)
+        
+        # ========== FORMULARIO UNIFICADO ==========
+        form_container = QWidget()
+        form_layout = QVBoxLayout(form_container)
+        form_layout.setContentsMargins(0, 10, 0, 10)
+        form_layout.setSpacing(15)
+        
+        # Año selector
+        year_layout = QHBoxLayout()
+        year_label = QLabel("📆 Año:")
+        self.year_label = year_label
+        year_layout.addWidget(year_label)
+        year_layout.addStretch()
+        
+        self.year_combo = QComboBox()
+        current_year = datetime.now().year
+        for year in range(current_year, current_year - 5, -1):
+            self.year_combo.addItem(str(year))
+        self.year_combo.setFixedSize(220, 45)
+        year_layout.addWidget(self.year_combo)
+        form_layout.addLayout(year_layout)
+        
+        # Tipo de reporte selector
+        type_layout = QHBoxLayout()
+        type_label = QLabel("📋 Tipo de Reporte:")
+        self.type_label = type_label
+        type_layout.addWidget(type_label)
+        type_layout.addStretch()
+        
+        self.report_type_combo = QComboBox()
+        self.report_type_combo.addItems([
+            "Semanal", "Mensual", "Trimestral", "Anual", "Personalizado"
+        ])
+        self.report_type_combo.setFixedSize(220, 45)
+        self.report_type_combo.currentTextChanged.connect(self.on_report_type_changed)
+        type_layout.addWidget(self.report_type_combo)
+        form_layout.addLayout(type_layout)
+        
+        # ========== CAMPOS DINÁMICOS ==========
+        # Contenedor para campos que cambian según el tipo
+        self.dynamic_fields_container = QWidget()
+        self.dynamic_fields_layout = QVBoxLayout(self.dynamic_fields_container)
+        self.dynamic_fields_layout.setContentsMargins(0, 0, 0, 0)
+        self.dynamic_fields_layout.setSpacing(15)
+        form_layout.addWidget(self.dynamic_fields_container)
+        
+        # Inicializar campos específicos
+        self.init_dynamic_fields()
+        
+        main_layout.addWidget(form_container)
+        
+        # ========== PROGRESO ==========
+        progress_container = QWidget()
+        progress_layout = QVBoxLayout(progress_container)
+        progress_layout.setContentsMargins(0, 0, 0, 0)
+        progress_layout.setSpacing(8)
+        
+        self.status_label = QLabel("")
+        self.status_label.setAlignment(Qt.AlignCenter)
+        progress_layout.addWidget(self.status_label)
+        
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setFixedHeight(16)
+        self.progress_bar.setTextVisible(True)
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setFormat("%p%")
+        self.progress_bar.hide()
+        progress_layout.addWidget(self.progress_bar)
+        
+        main_layout.addWidget(progress_container)
+        
+        # ========== BOTÓN GENERAR ==========
+        generate_container = QHBoxLayout()
+        generate_container.addStretch()
+        self.generate_btn = QPushButton("📄 Generar Reporte")
+        self.generate_btn.setFixedSize(300, 50)
+        self.generate_btn.setCursor(Qt.PointingHandCursor)
+        self.generate_btn.clicked.connect(self.generate_report)
+        generate_container.addWidget(self.generate_btn)
+        generate_container.addStretch()
+        main_layout.addLayout(generate_container)
+        
+        main_layout.addStretch()
+        
+        # Cargar campos del tipo inicial (Semanal)
+        self.on_report_type_changed("Semanal")
+        
+        # Aplicar tema inicial (oscuro)
+        ThemeManager.apply_dark_theme(self)
+    
+    def init_dynamic_fields(self):
+        """Inicializa todos los widgets de campos dinámicos"""
+        # Campo semana
+        self.week_layout = QHBoxLayout()
+        self.week_label = QLabel("🗓️ Número de Semana:")
+        self.week_layout.addWidget(self.week_label)
+        self.week_layout.addStretch()
+        self.week_entry = QLineEdit()
+        self.week_entry.setPlaceholderText("Ej: 21")
+        self.week_entry.setAlignment(Qt.AlignCenter)
+        self.week_entry.setFixedSize(220, 45)
+        self.week_entry.setStyleSheet("font-size: 10pt; text-align: center;")
+        self.week_layout.addWidget(self.week_entry)
+        
+        # Campo mes
+        self.month_layout = QHBoxLayout()
+        self.month_label = QLabel("📅 Mes:")
+        self.month_layout.addWidget(self.month_label)
+        self.month_layout.addStretch()
+        self.month_combo = QComboBox()
+        self.month_combo.addItems([
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ])
+        self.month_combo.setFixedSize(220, 45)
+        self.month_layout.addWidget(self.month_combo)
+        
+        # Campo trimestre
+        self.quarter_layout = QHBoxLayout()
+        self.quarter_label = QLabel("📊 Trimestre:")
+        self.quarter_layout.addWidget(self.quarter_label)
+        self.quarter_layout.addStretch()
+        self.quarter_combo = QComboBox()
+        self.quarter_combo.addItems(["Q1", "Q2", "Q3", "Q4"])
+        self.quarter_combo.setFixedSize(220, 45)
+        self.quarter_layout.addWidget(self.quarter_combo)
+        
+        # Campos fecha personalizada
+        self.custom_start_layout = QHBoxLayout()
+        self.custom_start_label = QLabel("📅 Fecha Inicio:")
+        self.custom_start_layout.addWidget(self.custom_start_label)
+        self.custom_start_layout.addStretch()
+        self.custom_start_date = QDateEdit()
+        self.custom_start_date.setCalendarPopup(True)
+        self.custom_start_date.setDate(QDate.currentDate())
+        self.custom_start_date.setFixedSize(220, 45)
+        self.custom_start_layout.addWidget(self.custom_start_date)
+        
+        self.custom_end_layout = QHBoxLayout()
+        self.custom_end_label = QLabel("📅 Fecha Fin:")
+        self.custom_end_layout.addWidget(self.custom_end_label)
+        self.custom_end_layout.addStretch()
+        self.custom_end_date = QDateEdit()
+        self.custom_end_date.setCalendarPopup(True)
+        self.custom_end_date.setDate(QDate.currentDate())
+        self.custom_end_date.setFixedSize(220, 45)
+        self.custom_end_layout.addWidget(self.custom_end_date)
+    
+    def clear_dynamic_fields(self):
+        """Limpia todos los campos dinámicos del layout"""
+        while self.dynamic_fields_layout.count():
+            item = self.dynamic_fields_layout.takeAt(0)
+            if item.widget():
+                item.widget().setParent(None)
+            elif item.layout():
+                # Ocultar widgets del layout sin eliminarlos
+                for i in range(item.layout().count()):
+                    widget = item.layout().itemAt(i).widget()
+                    if widget:
+                        widget.setParent(None)
+    
+    def on_report_type_changed(self, report_type):
+        """Muestra u oculta campos según el tipo de reporte seleccionado"""
+        self.clear_dynamic_fields()
+        
+        if report_type == "Semanal":
+            self.dynamic_fields_layout.addLayout(self.week_layout)
+            # Re-añadir widgets al layout
+            if self.week_label.parent() is None:
+                self.week_layout.addWidget(self.week_label)
+                self.week_layout.addWidget(self.week_entry)
+                self.week_layout.addStretch()
+        
+        elif report_type == "Mensual":
+            self.dynamic_fields_layout.addLayout(self.month_layout)
+            if self.month_label.parent() is None:
+                self.month_layout.addWidget(self.month_label)
+                self.month_layout.addWidget(self.month_combo)
+                self.month_layout.addStretch()
+        
+        elif report_type == "Trimestral":
+            self.dynamic_fields_layout.addLayout(self.quarter_layout)
+            if self.quarter_label.parent() is None:
+                self.quarter_layout.addWidget(self.quarter_label)
+                self.quarter_layout.addWidget(self.quarter_combo)
+                self.quarter_layout.addStretch()
+        
+        elif report_type == "Anual":
+            # No necesita campos adicionales
+            pass
+        
+        elif report_type == "Personalizado":
+            self.dynamic_fields_layout.addLayout(self.custom_start_layout)
+            self.dynamic_fields_layout.addLayout(self.custom_end_layout)
+            if self.custom_start_label.parent() is None:
+                self.custom_start_layout.addWidget(self.custom_start_label)
+                self.custom_start_layout.addWidget(self.custom_start_date)
+                self.custom_start_layout.addStretch()
+                self.custom_end_layout.addWidget(self.custom_end_label)
+                self.custom_end_layout.addWidget(self.custom_end_date)
+                self.custom_end_layout.addStretch()
+    
+    def generate_last_week_report(self):
+        """Genera reporte de la semana anterior automáticamente"""
+        current_date = datetime.now()
+        week_number = current_date.isocalendar()[1] - 1
+        if week_number < 1:
+            week_number = 52
+        year = current_date.year
+        
+        # Configurar formulario
+        self.year_combo.setCurrentText(str(year))
+        self.report_type_combo.setCurrentText("Semanal")
+        self.week_entry.setText(str(week_number))
+        
+        # Generar
+        self.generate_report()
+    
+    def generate_this_month_report(self):
+        """Genera reporte del mes actual automáticamente"""
+        current_date = datetime.now()
+        month_names = [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ]
+        month_name = month_names[current_date.month - 1]
+        year = current_date.year
+        
+        # Configurar formulario
+        self.year_combo.setCurrentText(str(year))
+        self.report_type_combo.setCurrentText("Mensual")
+        self.month_combo.setCurrentText(month_name)
+        
+        # Generar
+        self.generate_report()
+    
+    def generate_report(self):
+        """Genera el reporte según el tipo y parámetros seleccionados"""
+        if self.current_thread and self.current_thread.isRunning():
+            QMessageBox.warning(self, "Generación en Progreso", 
+                              "Ya hay un reporte generándose. Por favor espera.")
+            return
+        
+        report_type = self.report_type_combo.currentText()
+        year = int(self.year_combo.currentText())
+        
+        kwargs = {}
+        
+        # Validar y recopilar parámetros según tipo
+        if report_type == "Semanal":
+            week_text = self.week_entry.text().strip()
+            if not week_text:
+                QMessageBox.warning(self, "Campo Requerido", "Por favor ingresa el número de semana.")
+                return
+            try:
+                week = int(week_text)
+                if week < 1 or week > 53:
+                    QMessageBox.warning(self, "Valor Inválido", "El número de semana debe estar entre 1 y 53.")
+                    return
+                kwargs['week'] = week
+            except ValueError:
+                QMessageBox.warning(self, "Valor Inválido", "El número de semana debe ser un número.")
+                return
+        
+        elif report_type == "Mensual":
+            month = self.month_combo.currentText()
+            kwargs['month'] = month
+        
+        elif report_type == "Trimestral":
+            quarter = self.quarter_combo.currentText()
+            kwargs['quarter'] = quarter
+        
+        elif report_type == "Anual":
+            # No necesita parámetros adicionales
+            pass
+        
+        elif report_type == "Personalizado":
+            start_date = self.custom_start_date.date().toPython()
+            end_date = self.custom_end_date.date().toPython()
+            
+            if start_date > end_date:
+                QMessageBox.warning(self, "Fechas Inválidas", 
+                                  "La fecha de inicio debe ser anterior a la fecha de fin.")
+                return
+            
+            kwargs['start_date'] = start_date
+            kwargs['end_date'] = end_date
+        
+        # Iniciar generación en thread
+        self.show_progress("Iniciando generación...")
+        self.current_thread = ReportThread(report_type, year, **kwargs)
+        self.current_thread.progress_update.connect(self.on_progress_update)
+        self.current_thread.progress_percent.connect(self.on_progress_percent)
+        self.current_thread.finished_success.connect(self.on_success)
+        self.current_thread.finished_error.connect(self.on_error)
+        self.current_thread.finished_warning.connect(self.on_warning)
+        self.current_thread.start()
+    
+    def show_progress(self, message):
+        """Muestra barra de progreso y deshabilita botón"""
+        self.status_label.setText(message)
+        self.progress_bar.setValue(0)
+        self.progress_bar.show()
+        self.generate_btn.setEnabled(False)
+        self.this_week_btn.setEnabled(False)
+        self.this_month_btn.setEnabled(False)
+    
+    def hide_progress(self):
+        """Oculta barra de progreso y habilita botón"""
+        self.status_label.setText("")
+        self.progress_bar.setValue(0)
+        self.progress_bar.hide()
+        self.generate_btn.setEnabled(True)
+        self.this_week_btn.setEnabled(True)
+        self.this_month_btn.setEnabled(True)
+    
+    def on_progress_update(self, message):
+        """Actualiza mensaje de progreso"""
+        self.status_label.setText(message)
+    
+    def on_progress_percent(self, percent):
+        """Actualiza porcentaje de progreso"""
+        self.progress_bar.setValue(percent)
+    
+    def on_success(self, message):
+        """Maneja generación exitosa"""
+        self.hide_progress()
+        QMessageBox.information(self, "Éxito", message)
+    
+    def on_error(self, message):
+        """Maneja error en generación"""
+        self.hide_progress()
+        QMessageBox.critical(self, "Error", message)
+    
+    def on_warning(self, message):
+        """Maneja advertencia en generación"""
+        self.hide_progress()
+        QMessageBox.warning(self, "Advertencia", message)
+    
+    def toggle_theme(self):
+        """Alterna entre tema claro y oscuro"""
+        self.is_dark_mode = not self.is_dark_mode
+        if self.is_dark_mode:
+            ThemeManager.apply_dark_theme(self)
+            self.theme_action.setText("☀️ Modo Claro")
+        else:
+            ThemeManager.apply_light_theme(self)
+            self.theme_action.setText("🌙 Modo Oscuro")
     
     def setup_icon(self):
         """Configura el ícono de la aplicación"""
-        if os.path.exists(APP_ICON_PATH):
-            try:
-                self.iconbitmap(APP_ICON_PATH)
-            except:
-                pass
-            
-            try:
-                self.iconphoto(True, APP_ICON_PATH)
-            except:
-                pass
+        try:
+            if APP_ICON_PATH:
+                self.setWindowIcon(QIcon(APP_ICON_PATH))
+        except:
+            pass
     
-    def create_ui(self):
-        """Crea la interfaz de usuario"""
+    def setup_menubar(self):
+        """Configura la barra de menú"""
+        menubar = self.menuBar()
         
-        # Título principal
-        title_label = ctk.CTkLabel(
-            self, 
-            text="Análisis del Métrico de Scrap",
-            font=ctk.CTkFont(size=22, weight="bold")
-        )
-        title_label.pack(pady=(20, 5))
+        # Menú Vista
+        view_menu = menubar.addMenu("Vista")
         
-        # Subtítulo
-        subtitle_label = ctk.CTkLabel(
-            self, 
-            text="Desarrollado por Oscar Teran",
-            font=ctk.CTkFont(size=12, weight="normal", slant="italic"),
-            text_color="gray"
-        )
-        subtitle_label.pack(pady=(0, 10))
-        
-        # TabView (pestañas)
-        self.tabview = ctk.CTkTabview(self, width=360, height=320)
-        self.tabview.pack(pady=10, padx=40)
-
-        # Configurar colores de pestañas
-        self.tabview.configure(
-            segmented_button_selected_color="#2F6690",  # Fondo de pestaña activa
-            segmented_button_selected_hover_color="#9DB4C0",  # Color al pasar el mouse
-        )
-        
-        # Agregar pestañas
-        self.tabview.add("Semanal")
-        self.tabview.add("Mensual")
-        self.tabview.add("Trimestral")
-        self.tabview.add("Anual")
-        self.tabview.add("Personalizado")
-        
-        # Crear contenido de cada pestaña
-        self.create_tabs()
-    
-    def create_tabs(self):
-        """Inicializa todas las pestañas"""
-        
-        # Pestaña Semanal (terminada)
-        weekly_frame = self.tabview.tab("Semanal")
-        # Si el ReportService está disponible, crear una instancia para inyección
-        if ReportService and WeeklyPdfAdapter:
-            weekly_adapter = WeeklyPdfAdapter()
-            loader = type('Loader', (), {'load_data': staticmethod(_load_data)})()
-            service = ReportService(loader, _process_weekly, _analyze_weekly, weekly_adapter)
-            self.report_service_weekly = service
-        self.weekly_tab = WeeklyTab(weekly_frame, self)
-        
-        # Pestaña Mensual (funcional)
-        monthly_frame = self.tabview.tab("Mensual")
-        # Si los componentes para Monthly están disponibles, crear el service
-        if ReportService and MonthlyPdfAdapter and _process_monthly and _analyze_monthly:
-            monthly_adapter = MonthlyPdfAdapter()
-            loader = type('Loader', (), {'load_data': staticmethod(_load_data)})()
-            self.report_service_monthly = ReportService(loader, _process_monthly, _analyze_monthly, monthly_adapter)
-        self.monthly_tab = MonthlyTab(monthly_frame, self)
-        
-        # Pestaña Trimestral (funcional)
-        quarterly_frame = self.tabview.tab("Trimestral")
-        if ReportService and QuarterlyPdfAdapter and _process_quarterly and _analyze_quarterly:
-            quarterly_adapter = QuarterlyPdfAdapter()
-            loader = type('Loader', (), {'load_data': staticmethod(_load_data)})()
-            self.report_service_quarterly = ReportService(loader, _process_quarterly, _analyze_quarterly, quarterly_adapter)
-        self.quarterly_tab = QuarterlyTab(quarterly_frame, self)
-        
-        # Pestaña Anual (funcional)
-        annual_frame = self.tabview.tab("Anual")
-        if ReportService and AnnualPdfAdapter and _process_annual and _analyze_annual:
-            annual_adapter = AnnualPdfAdapter()
-            loader = type('Loader', (), {'load_data': staticmethod(_load_data)})()
-            self.report_service_annual = ReportService(loader, _process_annual, _analyze_annual, annual_adapter)
-        self.anual_tab = AnnualTab(annual_frame, self)
-
-        # Pestañas personalizada (funcional)
-        custom_frame = self.tabview.tab("Personalizado")
-        if ReportService and CustomPdfAdapter and _process_custom and _analyze_custom:
-            custom_adapter = CustomPdfAdapter()
-            loader = type('Loader', (), {'load_data': staticmethod(_load_data)})()
-            self.report_service_custom = ReportService(loader, _process_custom, _analyze_custom, custom_adapter)
-        self.custom_tab = CustomTab(custom_frame, self)
+        # Acción cambiar tema
+        self.theme_action = view_menu.addAction("🌙 Modo Claro")
+        self.theme_action.triggered.connect(self.toggle_theme)
 
 
 def run_app():
     """Ejecuta la aplicación"""
-    app = ScrapRateApp()
-    app.mainloop()
+    app = QApplication(sys.argv)
+    
+    # Configurar estilo global de la aplicación
+    app.setStyle("Fusion")
+    
+    window = ScrapRateApp()
+    window.show()
+    
+    sys.exit(app.exec())
+

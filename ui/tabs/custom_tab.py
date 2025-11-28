@@ -1,248 +1,180 @@
 """
-custom_tab.py - Pestaña para reportes personalizados por rango de fechas
+custom_tab.py - Pestaña para reportes personalizados con PySide6
 """
 
-import customtkinter as ctk
-from tkinter import messagebox
+from PySide6.QtWidgets import (
+    QLabel, QDateEdit, QPushButton, QMessageBox, QHBoxLayout
+)
+from PySide6.QtCore import QDate, Qt
 from datetime import datetime
-import os
-import threading
-import re
-from tkinter import ttk
-import tkinter as tk
 
 from ui.tabs.base_tab import BaseTab
-from src.processors.data_loader import load_data
-from src.processors.custom_processor import process_custom_data
-from src.pdf_custom_generator import create_custom_report
-from src.analysis.custom_contributors import get_top_contributors_custom, get_scrap_reasons_custom
+from ui.report_thread import ReportThread
+
+
+class CustomReportThread(QThread):
+    """Thread para generar reporte personalizado sin bloquear UI"""
+    
+    progress_update = Signal(str)
+    finished_success = Signal(str)
+    finished_error = Signal(str)
+    finished_warning = Signal(str)
+    
+    def __init__(self, root_app, start_date, end_date):
+        super().__init__()
+        self.root_app = root_app
+        self.start_date = start_date
+        self.end_date = end_date
+    
+    def run(self):
+        """Ejecuta la generación del PDF en background"""
+        try:
+            self.progress_update.emit("⌛ Cargando datos...")
+            
+            service = getattr(self.root_app, 'report_service_custom', None)
+            if service:
+                filepath = service.run_report({
+                    'start_date': self.start_date.strftime('%Y-%m-%d'),
+                    'end_date': self.end_date.strftime('%Y-%m-%d')
+                })
+                if filepath:
+                    self.finished_success.emit(filepath)
+                    return
+            
+            scrap_df, ventas_df, horas_df = load_data()
+            if scrap_df is None:
+                self.finished_error.emit("No se pudo cargar el archivo.\nVerifique que 'test pandas.xlsx' exista en la carpeta 'data/'")
+                return
+            
+            self.progress_update.emit("⚙️ Procesando datos...")
+            result = process_custom_data(scrap_df, ventas_df, horas_df, self.start_date, self.end_date)
+            
+            if result is None:
+                self.finished_warning.emit(f"No se encontraron datos para el período:\n{self.start_date.strftime('%Y-%m-%d')} a {self.end_date.strftime('%Y-%m-%d')}")
+                return
+            
+            self.progress_update.emit("🔍 Analizando contribuidores...")
+            contributors = get_custom_contributors(scrap_df, self.start_date, self.end_date, top_n=10)
+            
+            self.progress_update.emit("📄 Generando PDF...")
+            # Nota: create_custom_report espera (data_df, contributors_df, reasons_df, start_date, end_date, output_path)
+            # Asumiendo que result tiene la información necesaria y contributors es el DataFrame
+            filepath = create_custom_report(result, contributors, contributors, self.start_date, self.end_date, None)
+            
+            if filepath:
+                self.finished_success.emit(filepath)
+            else:
+                self.finished_error.emit("No se pudo generar el PDF")
+        
+        except Exception as e:
+            self.finished_error.emit(f"Ocurrió un error:\n\n{str(e)}")
 
 
 class CustomTab(BaseTab):
-    """Pestaña para generación de reportes personalizados"""
-
-    def __init__(self, parent_frame, root_app):
-        """
-        Inicializa la pestaña personalizada
-        Args:
-            parent_frame: Frame padre
-            root_app: Referencia a la aplicación principal
-        """
-        super().__init__(parent_frame)
-        self.root_app = root_app
+    """Pestaña para generación de reportes personalizados por rango de fechas"""
+    
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.thread = None
         self.create_content()
-
+    
     def create_content(self):
         """Crea el contenido de la pestaña personalizada"""
         
-        # Label para Fecha Inicial
-        start_label = ctk.CTkLabel(
-            self.frame,
-            text="Fecha Inicial:",
-            font=ctk.CTkFont(size=14, weight="bold")
-        )
-        start_label.pack(pady=(20, 5))
-
-        # Entry para fecha inicial
-        self.start_date = ctk.CTkEntry(
-            self.frame,
-            width=120,
-            height=30,
-            font=ctk.CTkFont(size=14),
-            placeholder_text="dd/mm/aaaa"
-        )
-        self.start_date.pack(pady=5)
-
-        # Label para Fecha Final
-        end_label = ctk.CTkLabel(
-            self.frame,
-            text="Fecha Final:",
-            font=ctk.CTkFont(size=14, weight="bold")
-        )
-        end_label.pack(pady=(15, 5))
-
-        # Entry para fecha final
-        self.end_date = ctk.CTkEntry(
-            self.frame,
-            width=120,
-            height=30,
-            font=ctk.CTkFont(size=14),
-            placeholder_text="dd/mm/aaaa"
-        )
-        self.end_date.pack(pady=5)
-
+        # Fecha inicio
+        start_label = QLabel("📅 Fecha Inicio:")
+        start_label.setStyleSheet("font-size: 12pt; font-weight: 600;")
+        self.main_layout.addWidget(start_label)
+        
+        self.start_date = QDateEdit()
+        self.start_date.setFixedWidth(220)
+        self.start_date.setFixedHeight(38)
+        self.start_date.setCalendarPopup(True)
+        self.start_date.setDisplayFormat("dd/MM/yyyy")
+        self.start_date.setDate(QDate.currentDate().addMonths(-1))
+        
+        start_layout = QHBoxLayout()
+        start_layout.addStretch()
+        start_layout.addWidget(self.start_date)
+        start_layout.addStretch()
+        self.main_layout.addLayout(start_layout)
+        
+        # Fecha fin
+        end_label = QLabel("📅 Fecha Fin:")
+        end_label.setStyleSheet("font-size: 12pt; font-weight: 600;")
+        self.main_layout.addWidget(end_label)
+        
+        self.end_date = QDateEdit()
+        self.end_date.setFixedWidth(220)
+        self.end_date.setFixedHeight(38)
+        self.end_date.setCalendarPopup(True)
+        self.end_date.setDisplayFormat("dd/MM/yyyy")
+        self.end_date.setDate(QDate.currentDate())
+        
+        end_layout = QHBoxLayout()
+        end_layout.addStretch()
+        end_layout.addWidget(self.end_date)
+        end_layout.addStretch()
+        self.main_layout.addLayout(end_layout)
+        
         # Barra de progreso
         self.progress_bar, self.status_label = self.create_progress_bar()
-
-        # Botón generar PDF
-        self.pdf_button = ctk.CTkButton(
-            self.frame,
-            text="Generar Reporte PDF",
-            command=self.start_pdf_generation,
-            width=250,
-            height=50,
-            font=ctk.CTkFont(size=16, weight="bold"),
-            fg_color="#2F6690",
-            hover_color="#9DB4C0"
-        )
-        self.pdf_button.pack(pady=20)
-
-    def start_pdf_generation(self):
-        """Inicia la generación del PDF en un hilo separado"""
-        thread = threading.Thread(target=self.generate_pdf, daemon=True)
-        thread.start()
-
-    def validate_date(self, date_str):
-        """
-        Valida el formato de fecha dd/mm/aaaa y su validez
-        Args:
-            date_str: String con la fecha a validar
-        Returns:
-            datetime o None si la fecha es inválida
-        """
-        # Verificar formato
-        if not re.match(r'^\d{2}/\d{2}/\d{4}$', date_str):
-            return None
         
+        # Botón generar PDF
+        self.pdf_button = QPushButton("📄 Generar Reporte PDF")
+        self.pdf_button.setFixedSize(240, 45)
+        self.pdf_button.setCursor(Qt.PointingHandCursor)
+        self.pdf_button.clicked.connect(self.start_pdf_generation)
+        
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        button_layout.addWidget(self.pdf_button)
+        button_layout.addStretch()
+        self.main_layout.addLayout(button_layout)
+    
+    def start_pdf_generation(self):
+        """Inicia la generación del PDF en un thread separado"""
         try:
-            # Convertir a datetime
-            return datetime.strptime(date_str, '%d/%m/%Y')
-        except ValueError:
-            return None
-
-    def generate_pdf(self):
-        """Genera el PDF personalizado con los datos del rango de fechas"""
-        try:
-            # Obtener y validar fechas
-            start_str = self.start_date.get()
-            end_str = self.end_date.get()
+            # Convertir QDate a datetime
+            start_qdate = self.start_date.date()
+            end_qdate = self.end_date.date()
             
-            # Validar formato y existencia de fechas
-            start_date = self.validate_date(start_str)
-            if not start_date:
-                messagebox.showerror(
-                    "Error", 
-                    f"Fecha inicial inválida: {start_str}\nUse el formato dd/mm/aaaa"
-                )
-                return
-                
-            end_date = self.validate_date(end_str)
-            if not end_date:
-                messagebox.showerror(
-                    "Error", 
-                    f"Fecha final inválida: {end_str}\nUse el formato dd/mm/aaaa"
-                )
+            start_dt = datetime(start_qdate.year(), start_qdate.month(), start_qdate.day())
+            end_dt = datetime(end_qdate.year(), end_qdate.month(), end_qdate.day())
+            
+            # Validaciones
+            if start_dt > end_dt:
+                QMessageBox.critical(self, "Error", "La fecha de inicio debe ser anterior a la fecha de fin")
                 return
             
-            # Ajustar las horas
-            start_date = datetime.combine(start_date, datetime.min.time())
-            end_date = datetime.combine(end_date, datetime.max.time())
-
-            # Validar rango de fechas
-            if start_date > end_date:
-                self.root_app.after(0, lambda: messagebox.showerror(
-                    "Error", 
-                    "La fecha inicial debe ser anterior a la fecha final"
-                ))
+            if end_dt > datetime.now():
+                QMessageBox.critical(self, "Error", "La fecha de fin no puede ser futura")
                 return
-
-            # Paso 1: Cargar datos
-            self.root_app.after(0, lambda: self.show_progress(
-                self.progress_bar, self.status_label, self.pdf_button, "⌛ Cargando datos..."
-            ))
-            scrap_df, ventas_df, horas_df = load_data()
-            if scrap_df is None:
-                self.root_app.after(0, lambda: self.hide_progress(
-                    self.progress_bar, self.status_label, self.pdf_button
-                ))
-                self.root_app.after(0, lambda: messagebox.showerror(
-                    "Error",
-                    "No se pudo cargar el archivo.\nVerifique que 'test pandas.xlsx' exista en la carpeta 'data/'"
-                ))
-                return
-
-            # Paso 2: Procesar datos y generar reporte via ReportService si está disponible
-            self.root_app.after(0, lambda: self.status_label.configure(text="⚙️ Procesando datos..."))
-
-            service = getattr(self.root_app, 'report_service_custom', None)
-            if service:
-                # ReportService espera claves start_date y end_date (ya normalizamos antes)
-                filepath = service.run_report({'start_date': start_date, 'end_date': end_date})
-                if filepath:
-                    self.root_app.after(0, lambda: self.hide_progress(
-                        self.progress_bar, self.status_label, self.pdf_button
-                    ))
-                    self.root_app.after(0, lambda: messagebox.showinfo(
-                        "Éxito",
-                        f"El archivo [{os.path.basename(filepath)}]\n\n se ha generado exitosamente."
-                    ))
-                    try:
-                        if os.name == 'nt':
-                            os.startfile(filepath)
-                        elif os.name == 'posix':
-                            os.system(f'open "{filepath}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{filepath}"')
-                    except:
-                        pass
-                    return
-                else:
-                    # continuar con el flujo local
-                    result = None
-            else:
-                result = process_custom_data(scrap_df, ventas_df, horas_df, start_date, end_date)
-                if result is None:
-                    self.root_app.after(0, lambda: self.hide_progress(
-                        self.progress_bar, self.status_label, self.pdf_button
-                    ))
-                    self.root_app.after(0, lambda: messagebox.showwarning(
-                        "Sin datos",
-                        f"No se encontraron datos para el periodo:\n{start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}"
-                    ))
-                    return
-
-                # Paso 3: Analizar contribuidores
-                self.root_app.after(0, lambda: self.status_label.configure(text="🔍 Analizando contribuidores..."))
-                contributors = get_top_contributors_custom(scrap_df, start_date, end_date)
-                reasons = get_scrap_reasons_custom(scrap_df, start_date, end_date)
-
-                # Paso 4: Generar PDF
-                self.root_app.after(0, lambda: self.status_label.configure(text="📄 Generando PDF..."))
-                filename = f"Scrap_Rate_{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}.pdf"
-                filepath = os.path.join("reports", filename)
-                
-                create_custom_report(
-                    result,
-                    contributors,
-                    reasons,
-                    start_date,
-                    end_date,
-                    filepath
-                )
-
-            # Ocultar progreso
-            self.root_app.after(0, lambda: self.hide_progress(
-                self.progress_bar, self.status_label, self.pdf_button
-            ))
-
-            # Mostrar mensaje de éxito y abrir PDF
-            if os.path.exists(filepath):
-                self.root_app.after(0, lambda: messagebox.showinfo(
-                    "Éxito",
-                    f"El archivo [{filename}]\n\n se ha generado exitosamente."
-                ))
-                # Abrir PDF
-                try:
-                    if os.name == 'nt':
-                        os.startfile(filepath)
-                    elif os.name == 'posix':
-                        os.system(f'open "{filepath}"' if os.uname().sysname == 'Darwin' else f'xdg-open "{filepath}"')
-                except:
-                    pass
-            else:
-                self.root_app.after(0, lambda: messagebox.showerror("Error", "No se pudo generar el PDF"))
-
+            
+            self.show_progress(self.progress_bar, self.status_label, self.pdf_button, "⌛ Procesando...")
+            
+            self.thread = ReportThread('custom', start_dt.year, start_date=start_dt, end_date=end_dt)
+            self.thread.progress_update.connect(self.on_progress_update)
+            self.thread.progress_percent.connect(lambda x: None)
+            self.thread.finished_success.connect(lambda msg: self.on_success_unified(msg))
+            self.thread.finished_error.connect(self.on_error)
+            self.thread.finished_warning.connect(self.on_warning)
+            self.thread.start()
+        
         except Exception as e:
-            self.root_app.after(0, lambda: self.hide_progress(
-                self.progress_bar, self.status_label, self.pdf_button
-            ))
-            error_msg = str(e)
-            self.root_app.after(0, lambda msg=error_msg: messagebox.showerror("Error", f"Ocurrió un error:\n\n{msg}"))
+            QMessageBox.critical(self, "Error", f"Error al iniciar generación:\n\n{str(e)}")
+    
+    def on_progress_update(self, message):
+        self.status_label.setText(message)
+    
+    def on_success_unified(self, message):
+        self.hide_progress(self.progress_bar, self.status_label, self.pdf_button)
+        QMessageBox.information(self, "Éxito", message)
+    
+    def on_error(self, message):
+        self.hide_progress(self.progress_bar, self.status_label, self.pdf_button)
+        QMessageBox.critical(self, "Error", message)
+    
+    def on_warning(self, message):
+        self.hide_progress(self.progress_bar, self.status_label, self.pdf_button)
+        QMessageBox.warning(self, "Sin datos", message)

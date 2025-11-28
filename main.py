@@ -1,13 +1,13 @@
-from ui.app import ScrapRateApp
+from ui.app import run_app
 from src.utils.logging_config import setup_logging
 import logging
 
-def run_app():
+def main():
     # Configurar logging (cambiar a DEBUG para más detalles)
     setup_logging(level=logging.INFO)
     
-    app = ScrapRateApp()
-    app.mainloop()
+    # Ejecutar aplicación PySide6
+    run_app()
 
 if __name__ == "__main__":
-    run_app()
+    main()

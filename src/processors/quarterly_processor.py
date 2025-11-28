@@ -21,6 +21,11 @@ def process_quarterly_data(scrap_df, ventas_df, horas_df, quarter, year):
         DataFrame: DataFrame con el reporte trimestral o None si no hay datos
     """
     
+    # Hacer copias para evitar SettingWithCopyWarning
+    scrap_df = scrap_df.copy()
+    ventas_df = ventas_df.copy()
+    horas_df = horas_df.copy()
+    
     # Convertir columnas de fecha a datetime
     scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'])
     ventas_df['Create Date'] = pd.to_datetime(ventas_df['Create Date'])

@@ -1,7 +1,12 @@
 - Utiliza Python por defecto.
-- Utiliza customtkinter para la ui.
+- Utiliza PySide6 para la ui.
 - Haz uso de buenas prácticas.
 - Siempre usa snake case para el nombre de las variables.
 - Refactoriza el código siempre que se pueda.
 - Crea test de las funcionalidades principales.
 - Siempre comenta lo que hace una linea, bloque o conjunto de lineas.
+- Actualizar DEV_GUIDE.md siempre que sea necesario.
+- Actualizar .gitignore siempre que sea necesario.
+- Asegúrate de que el código funciona correctamente antes de enviarlo.
+- Actualizar requirements.txt siempre que sea necesario.
+- Asegúrate de que el código sigue el estilo PEP8.

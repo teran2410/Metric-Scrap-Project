@@ -18,8 +18,9 @@ def get_top_contributors_custom(scrap_df, start_date, end_date, n_top=10):
     Returns:
         DataFrame: DataFrame con los principales contribuidores o None
     """
-    if scrap_df is None or scrap_df.empty:
-        print("⚠️ No hay datos de scrap disponibles")
+    if scrap_df is None:
+        return None
+    if scrap_df.empty:
         return None
     
     # Crear copia para no modificar el original
@@ -32,10 +33,14 @@ def get_top_contributors_custom(scrap_df, start_date, end_date, n_top=10):
         print(f"❌ Error al convertir fechas: {e}")
         return None
     
+    # Convertir start_date y end_date a pd.Timestamp para comparación correcta
+    start_date_ts = pd.Timestamp(start_date)
+    end_date_ts = pd.Timestamp(end_date)
+    
     # Filtrar por rango de fechas
     df = df[
-        (df['Create Date'] >= start_date) & 
-        (df['Create Date'] <= end_date)
+        (df['Create Date'] >= start_date_ts) & 
+        (df['Create Date'] <= end_date_ts)
     ]
     
     if df.empty:
@@ -43,24 +48,58 @@ def get_top_contributors_custom(scrap_df, start_date, end_date, n_top=10):
         return None
     
     # Convertir valores a positivo
-    if 'Total Posted' in df.columns:
-        df['Total Posted'] = df['Total Posted'] * -1
+    df['Quantity'] = df['Quantity'].abs()
+    df['Total Posted'] = df['Total Posted'].abs()
     
-    # Agrupar por location y sumar
-    contributors = df.groupby('Location')['Total Posted'].agg(['sum', 'count']).reset_index()
-    contributors.columns = ['Location', 'Total Scrap', 'Count']
+    # Agrupar por Item (número de parte) como en weekly/monthly/quarterly
+    contributors = df.groupby('Item', as_index=False).agg({
+        'Description': 'first',
+        'Location': 'first',
+        'Quantity': 'sum',
+        'Total Posted': 'sum'
+    })
     
-    # Ordenar por Total Scrap descendente
-    contributors = contributors.sort_values('Total Scrap', ascending=False)
+    # Ordenar por Total Posted descendente
+    contributors = contributors.sort_values('Total Posted', ascending=False)
     
-    # Tomar los top n contribuidores
-    top_contributors = contributors.head(n_top).copy()
+    # Reset index y tomar top n
+    contributors = contributors.reset_index(drop=True)
+    contributors = contributors.head(n_top)
     
-    # Calcular el porcentaje del total
-    total_scrap = contributors['Total Scrap'].sum()
-    top_contributors.loc[:, '% of Total'] = (top_contributors['Total Scrap'] / total_scrap * 100)
+    # Calcular % acumulado
+    total_top_n = contributors['Total Posted'].sum()
+    if total_top_n > 0:
+        contributors['Cumulative %'] = (contributors['Total Posted'].cumsum() / total_top_n * 100).round(2)
+    else:
+        contributors['Cumulative %'] = 0.0
     
-    return top_contributors
+    # Agregar columna de ranking (Lugar)
+    contributors.insert(0, 'Lugar', range(1, len(contributors) + 1))
+    
+    # Renombrar columnas para consistencia con otros reportes
+    contributors = contributors.rename(columns={
+        'Item': 'Número de Parte',
+        'Description': 'Descripción',
+        'Location': 'Ubicación',
+        'Quantity': 'Cantidad Scrapeada',
+        'Total Posted': 'Monto (dls)',
+        'Cumulative %': '% Acumulado'
+    })
+    
+    # Agregar fila TOTAL
+    total_row = pd.DataFrame({
+        'Lugar': ['TOTAL'],
+        'Número de Parte': [''],
+        'Descripción': [''],
+        'Ubicación': [''],
+        'Cantidad Scrapeada': [contributors['Cantidad Scrapeada'].sum()],
+        'Monto (dls)': [contributors['Monto (dls)'].sum()],
+        '% Acumulado': ['']
+    })
+    
+    contributors = pd.concat([contributors, total_row], ignore_index=True)
+    
+    return contributors
 
 def get_scrap_reasons_custom(scrap_df, start_date, end_date, n_top=10):
     """
@@ -75,8 +114,9 @@ def get_scrap_reasons_custom(scrap_df, start_date, end_date, n_top=10):
     Returns:
         DataFrame: DataFrame con las principales razones de scrap o None
     """
-    if scrap_df is None or scrap_df.empty:
-        print("⚠️ No hay datos de scrap disponibles")
+    if scrap_df is None:
+        return None
+    if scrap_df.empty:
         return None
     
     # Crear copia para no modificar el original
@@ -89,10 +129,14 @@ def get_scrap_reasons_custom(scrap_df, start_date, end_date, n_top=10):
         print(f"❌ Error al convertir fechas: {e}")
         return None
     
+    # Convertir start_date y end_date a pd.Timestamp para comparación correcta
+    start_date_ts = pd.Timestamp(start_date)
+    end_date_ts = pd.Timestamp(end_date)
+    
     # Filtrar por rango de fechas
     df = df[
-        (df['Create Date'] >= start_date) & 
-        (df['Create Date'] <= end_date)
+        (df['Create Date'] >= start_date_ts) & 
+        (df['Create Date'] <= end_date_ts)
     ]
     
     if df.empty:

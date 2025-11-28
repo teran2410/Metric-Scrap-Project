@@ -20,14 +20,17 @@ def process_annual_data(scrap_df, ventas_df, horas_df, year):
         DataFrame: DataFrame con el reporte anual por meses o None si no hay datos
     """
     # Validar que los DataFrames no estén vacíos
-    if scrap_df is None or scrap_df.empty:
-        print("⚠️ scrap_df está vacío")
+    if scrap_df is None:
         return None
-    if ventas_df is None or ventas_df.empty:
-        print("⚠️ ventas_df está vacío")
+    if scrap_df.empty:
         return None
-    if horas_df is None or horas_df.empty:
-        print("⚠️ horas_df está vacío")
+    if ventas_df is None:
+        return None
+    if ventas_df.empty:
+        return None
+    if horas_df is None:
+        return None
+    if horas_df.empty:
         return None
     
     # Validar que existan las columnas necesarias
@@ -147,7 +150,9 @@ def get_annual_weeks_data(scrap_df, ventas_df, horas_df, year):
         DataFrame: DataFrame con datos semanales o None
     """
     # Validar DataFrames
-    if scrap_df is None or scrap_df.empty or ventas_df is None or ventas_df.empty or horas_df is None or horas_df.empty:
+    if scrap_df is None or ventas_df is None or horas_df is None:
+        return None
+    if scrap_df.empty or ventas_df.empty or horas_df.empty:
         return None
     
     # Crear copias

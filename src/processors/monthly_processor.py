@@ -3,7 +3,7 @@ monthly_processor.py - Procesamiento de datos mensuales
 """
 
 import pandas as pd
-from config import TARGET_RATES, WEEK_MONTH_MAPPING_2025, get_week_number_vectorized
+from config import TARGET_RATES, WEEK_MONTH_MAPPING_2025, get_week_number_vectorized, MONTHS_ES_TO_NUM
 
 
 def process_monthly_data(scrap_df, ventas_df, horas_df, month, year):
@@ -37,18 +37,21 @@ def process_monthly_data(scrap_df, ventas_df, horas_df, month, year):
     horas_df['Week'] = get_week_number_vectorized(horas_df['Trans Date'], year=year)
     horas_df['Year'] = horas_df['Trans Date'].dt.year
     
-    # Filtrar por año
-    scrap_year = scrap_df[scrap_df['Year'] == year]
-    ventas_year = ventas_df[ventas_df['Year'] == year]
-    horas_year = horas_df[horas_df['Year'] == year]
+    # Filtrar por año y hacer copias explícitas para evitar SettingWithCopyWarning
+    scrap_year = scrap_df[scrap_df['Year'] == year].copy()
+    ventas_year = ventas_df[ventas_df['Year'] == year].copy()
+    horas_year = horas_df[horas_df['Year'] == year].copy()
     
     # Determinar las semanas del mes usando el mapeo fiscal si está disponible
+    # Convertir el nombre del mes a número (1-12) usando el diccionario de config.py
+    month_num = MONTHS_ES_TO_NUM.get(month, 0)
+    
     weeks_in_month = None
-    if year == 2025 and WEEK_MONTH_MAPPING_2025 and month in WEEK_MONTH_MAPPING_2025:
+    if year == 2025 and WEEK_MONTH_MAPPING_2025 and month_num in WEEK_MONTH_MAPPING_2025:
         # Usar el mapeo fiscal explícito (eliminar duplicados preservando orden)
         seen = set()
         weeks_in_month = []
-        for w in WEEK_MONTH_MAPPING_2025[month]:
+        for w in WEEK_MONTH_MAPPING_2025[month_num]:
             if w not in seen:
                 seen.add(w)
                 weeks_in_month.append(int(w))
@@ -58,9 +61,9 @@ def process_monthly_data(scrap_df, ventas_df, horas_df, month, year):
         ventas_year['Month'] = ventas_year['Create Date'].dt.month
         horas_year['Month'] = horas_year['Trans Date'].dt.month
         
-        weeks_set = set(scrap_year[scrap_year['Month'] == month]['Week'].unique())
-        weeks_set.update(ventas_year[ventas_year['Month'] == month]['Week'].unique())
-        weeks_set.update(horas_year[horas_year['Month'] == month]['Week'].unique())
+        weeks_set = set(scrap_year[scrap_year['Month'] == month_num]['Week'].unique())
+        weeks_set.update(ventas_year[ventas_year['Month'] == month_num]['Week'].unique())
+        weeks_set.update(horas_year[horas_year['Month'] == month_num]['Week'].unique())
         weeks_in_month = sorted(weeks_set)
     
     if not weeks_in_month or len(weeks_in_month) == 0:

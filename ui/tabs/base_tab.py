@@ -1,60 +1,72 @@
 """
-base_tab.py - Clase base para las pestañas de la aplicación
+base_tab.py - Clase base para las pestañas con PySide6
 """
 
-import customtkinter as ctk
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel, QComboBox, 
+    QProgressBar, QPushButton, QHBoxLayout
+)
+from PySide6.QtCore import Qt, QThread, Signal
 from datetime import datetime
 
 
-class BaseTab:
+class BaseTab(QWidget):
     """Clase base para las pestañas de la aplicación"""
     
-    def __init__(self, parent_frame):
+    def __init__(self, parent=None):
         """
         Inicializa la pestaña base
         
         Args:
-            parent_frame: Frame padre donde se creará el contenido
+            parent: Widget padre (la ventana principal)
         """
-        self.frame = parent_frame
+        super().__init__(parent)
+        self.root_app = parent
         self.current_year = datetime.now().year
         # Use ISO week number for consistency with processors (1-53)
         try:
             self.current_week = int(datetime.now().isocalendar()[1])
         except Exception:
             self.current_week = int(datetime.now().strftime('%U'))
+        
+        # Layout principal
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setAlignment(Qt.AlignTop)
+        self.main_layout.setContentsMargins(30, 25, 30, 25)
+        self.main_layout.setSpacing(15)
     
-    def create_year_selector(self, command=None):
+    def create_year_selector(self, on_change=None):
         """
         Crea un selector de año reutilizable
         
         Args:
-            command: Función callback cuando cambia el año
+            on_change: Función callback cuando cambia el año
             
         Returns:
-            CTkComboBox: ComboBox del año
+            QComboBox: ComboBox del año
         """
-        year_label = ctk.CTkLabel(
-            self.frame,
-            text="Año:",
-            font=ctk.CTkFont(size=14, weight="bold")
-        )
-        year_label.pack(pady=(20, 5))
+        year_label = QLabel("Año:")
+        year_label.setStyleSheet("font-size: 12pt; font-weight: 600;")
+        self.main_layout.addWidget(year_label)
         
+        year_combo = QComboBox()
+        year_combo.setFixedWidth(220)
+        year_combo.setFixedHeight(38)
         years_list = [str(year) for year in range(2023, self.current_year + 1)]
+        year_combo.addItems(years_list)
+        year_combo.setCurrentText(str(self.current_year))
         
-        year_combobox = ctk.CTkComboBox(
-            self.frame,
-            values=years_list,
-            width=200,
-            justify="center",
-            command=command,
-            state="readonly"
-        )
-        year_combobox.set(str(self.current_year))
-        year_combobox.pack(pady=5)
+        if on_change:
+            year_combo.currentTextChanged.connect(on_change)
         
-        return year_combobox
+        # Centrar el combo
+        combo_layout = QHBoxLayout()
+        combo_layout.addStretch()
+        combo_layout.addWidget(year_combo)
+        combo_layout.addStretch()
+        self.main_layout.addLayout(combo_layout)
+        
+        return year_combo
     
     def create_progress_bar(self):
         """
@@ -63,19 +75,30 @@ class BaseTab:
         Returns:
             tuple: (progress_bar, status_label)
         """
-        progress_bar = ctk.CTkProgressBar(
-            self.frame,
-            width=250,
-            height=15,
-            mode="indeterminate"
-        )
+        status_label = QLabel("")
+        status_label.setStyleSheet("font-size: 11pt; color: #7A7A7A; font-weight: 500;")
+        status_label.setAlignment(Qt.AlignCenter)
+        status_label.hide()
         
-        status_label = ctk.CTkLabel(
-            self.frame,
-            text="",
-            font=ctk.CTkFont(size=12),
-            text_color="gray"
-        )
+        progress_bar = QProgressBar()
+        progress_bar.setFixedWidth(280)
+        progress_bar.setFixedHeight(8)
+        progress_bar.setTextVisible(False)
+        progress_bar.hide()
+        
+        # Layouts centrados
+        label_layout = QHBoxLayout()
+        label_layout.addStretch()
+        label_layout.addWidget(status_label)
+        label_layout.addStretch()
+        
+        progress_layout = QHBoxLayout()
+        progress_layout.addStretch()
+        progress_layout.addWidget(progress_bar)
+        progress_layout.addStretch()
+        
+        self.main_layout.addLayout(label_layout)
+        self.main_layout.addLayout(progress_layout)
         
         return progress_bar, status_label
     
@@ -89,11 +112,11 @@ class BaseTab:
             button: Botón a deshabilitar
             message (str): Mensaje a mostrar
         """
-        status_label.configure(text=message)
-        status_label.pack(pady=(5, 0))
-        progress_bar.pack(pady=(10, 20))
-        progress_bar.start()
-        button.configure(state="disabled")
+        status_label.setText(message)
+        status_label.show()
+        progress_bar.setRange(0, 0)  # Modo indeterminado
+        progress_bar.show()
+        button.setEnabled(False)
     
     def hide_progress(self, progress_bar, status_label, button):
         """
@@ -104,7 +127,7 @@ class BaseTab:
             status_label: Label de estado
             button: Botón a habilitar
         """
-        progress_bar.stop()
-        progress_bar.pack_forget()
-        status_label.pack_forget()
-        button.configure(state="normal")
+        progress_bar.hide()
+        status_label.hide()
+        button.setEnabled(True)
+

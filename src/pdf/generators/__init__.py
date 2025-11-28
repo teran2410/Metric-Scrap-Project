@@ -1,0 +1,3 @@
+"""
+PDF Generators package initialization
+"""

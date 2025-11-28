@@ -3,7 +3,7 @@ monthly_contributors.py - Análisis de contribuidores mensuales de scrap
 """
 
 import pandas as pd
-from config import WEEK_MONTH_MAPPING_2025, get_week_number_vectorized
+from config import WEEK_MONTH_MAPPING_2025, get_week_number_vectorized, MONTHS_ES_TO_NUM
 
 
 def get_monthly_contributors(scrap_df, month, year, top_n=10):
@@ -35,21 +35,24 @@ def get_monthly_contributors(scrap_df, month, year, top_n=10):
     # Filtrar por año
     scrap_year = scrap_df[scrap_df['Year'] == year]
     
+    # Convertir nombre de mes a número si es string
+    month_num = MONTHS_ES_TO_NUM.get(month, month) if isinstance(month, str) else month
+    
     # Determinar las semanas del mes usando el mapeo fiscal si está disponible
     weeks_in_month = None
-    if year == 2025 and WEEK_MONTH_MAPPING_2025 and month in WEEK_MONTH_MAPPING_2025:
+    if year == 2025 and WEEK_MONTH_MAPPING_2025 and month_num in WEEK_MONTH_MAPPING_2025:
         # Usar el mapeo fiscal explícito (eliminar duplicados preservando orden)
         seen = set()
         weeks_in_month = []
-        for w in WEEK_MONTH_MAPPING_2025[month]:
+        for w in WEEK_MONTH_MAPPING_2025[month_num]:
             if w not in seen:
                 seen.add(w)
                 weeks_in_month.append(int(w))
     else:
         # Fallback: detectar automáticamente las semanas que tocan el mes
-        weeks_in_month = scrap_year[scrap_year['Month'] == month]['Week'].unique()
+        weeks_in_month = scrap_year[scrap_year['Month'] == month_num]['Week'].unique()
     
-    if not weeks_in_month or len(weeks_in_month) == 0:
+    if len(weeks_in_month) == 0:
         return None
     
     # Filtrar todas las filas de esas semanas (incluye días fuera del mes)
@@ -153,21 +156,24 @@ def get_monthly_location_contributors(scrap_df, month, year, top_n=10):
     # Filtrar por año
     scrap_year = scrap_df[scrap_df['Year'] == year]
     
+    # Convertir nombre de mes a número si es string
+    month_num = MONTHS_ES_TO_NUM.get(month, month) if isinstance(month, str) else month
+    
     # Determinar las semanas del mes usando el mapeo fiscal si está disponible
     weeks_in_month = None
-    if year == 2025 and WEEK_MONTH_MAPPING_2025 and month in WEEK_MONTH_MAPPING_2025:
+    if year == 2025 and WEEK_MONTH_MAPPING_2025 and month_num in WEEK_MONTH_MAPPING_2025:
         # Usar el mapeo fiscal explícito (eliminar duplicados preservando orden)
         seen = set()
         weeks_in_month = []
-        for w in WEEK_MONTH_MAPPING_2025[month]:
+        for w in WEEK_MONTH_MAPPING_2025[month_num]:
             if w not in seen:
                 seen.add(w)
                 weeks_in_month.append(int(w))
     else:
         # Fallback: detectar automáticamente las semanas que tocan el mes
-        weeks_in_month = scrap_year[scrap_year['Month'] == month]['Week'].unique()
+        weeks_in_month = scrap_year[scrap_year['Month'] == month_num]['Week'].unique()
     
-    if not weeks_in_month or len(weeks_in_month) == 0:
+    if len(weeks_in_month) == 0:
         return None
     
     # Filtrar todas las filas de esas semanas
