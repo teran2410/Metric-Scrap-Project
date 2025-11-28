@@ -5,6 +5,7 @@ custom.py - Generador PDF para reportes de rango de fechas personalizado
 from src.pdf.base_generator import BasePDFGenerator
 from src.pdf.components import get_main_table_style, get_contributors_table_style, apply_contributors_cumulative_coloring
 from src.pdf.styles import get_section_title_style
+from config import CUSTOM_REPORTS_FOLDER
 from reportlab.platypus import Table, Paragraph
 from reportlab.lib.units import inch
 import os
@@ -13,6 +14,9 @@ import pandas as pd
 
 class CustomPDFGenerator(BasePDFGenerator):
     """Generador de PDF para reportes personalizados (rango de fechas)"""
+    
+    def __init__(self, output_folder=CUSTOM_REPORTS_FOLDER):
+        super().__init__(output_folder)
     
     def _calculate_target_achievement(self, df):
         """

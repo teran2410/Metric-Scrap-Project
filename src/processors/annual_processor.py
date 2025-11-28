@@ -63,9 +63,9 @@ def process_annual_data(scrap_df, ventas_df, horas_df, year):
         print("⚠️ No hay fechas válidas en ningún DataFrame")
         return None
     
-    # Convertir scrap a positivo
+    # Convertir scrap a positivo usando valor absoluto (más robusto)
     if 'Total Posted' in scrap_df.columns:
-        scrap_df['Total Posted'] = scrap_df['Total Posted'] * -1
+        scrap_df['Total Posted'] = scrap_df['Total Posted'].abs()
     
     # Agregar columnas de mes y año
     scrap_df['Month'] = scrap_df['Create Date'].dt.month
@@ -174,9 +174,9 @@ def get_annual_weeks_data(scrap_df, ventas_df, horas_df, year):
     ventas_df = ventas_df.dropna(subset=['Create Date'])
     horas_df = horas_df.dropna(subset=['Trans Date'])
     
-    # Convertir scrap a positivo
+    # Convertir scrap a positivo usando valor absoluto (más robusto)
     if 'Total Posted' in scrap_df.columns:
-        scrap_df['Total Posted'] = scrap_df['Total Posted'] * -1
+        scrap_df['Total Posted'] = scrap_df['Total Posted'].abs()
     
     # Agregar columnas de semana y año
     scrap_df['Week'] = scrap_df['Create Date'].dt.isocalendar().week.astype(int)

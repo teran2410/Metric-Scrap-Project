@@ -7,7 +7,7 @@ from datetime import datetime
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
     QWidget, QLabel, QPushButton, QComboBox, QLineEdit, QDateEdit,
-    QProgressBar, QMessageBox, QFrame, QMenuBar
+    QProgressBar, QMessageBox, QFrame, QMenuBar, QCheckBox
 )
 from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QIcon
@@ -20,6 +20,7 @@ from config import (
 # Importar módulos modularizados
 from ui.report_thread import ReportThread
 from ui.theme_manager import ThemeManager
+from ui.dialogs import show_error_dialog, show_log_viewer, show_validation_report, show_backup_manager
 
 
 class ScrapRateApp(QMainWindow):
@@ -95,7 +96,9 @@ class ScrapRateApp(QMainWindow):
             "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
             "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
         ]
-        current_month = month_names[current_date.month - 1]
+        # Mostrar mes anterior (mes con datos completos)
+        last_month_num = current_date.month - 1 if current_date.month > 1 else 12
+        last_month_name = month_names[last_month_num - 1]
         
         # Contenedor para botón de semana anterior + label
         week_container = QVBoxLayout()
@@ -123,8 +126,8 @@ class ScrapRateApp(QMainWindow):
         month_container = QVBoxLayout()
         month_container.setSpacing(5)
         
-        # Botón reporte este mes
-        this_month_btn = QPushButton("Este Mes")
+        # Botón reporte mes anterior
+        this_month_btn = QPushButton("Mes Anterior")
         this_month_btn.setFixedSize(180, 38)
         this_month_btn.setStyleSheet("font-size: 10pt;")
         this_month_btn.setCursor(Qt.PointingHandCursor)
@@ -132,8 +135,8 @@ class ScrapRateApp(QMainWindow):
         self.this_month_btn = this_month_btn
         month_container.addWidget(this_month_btn)
         
-        # Label con nombre del mes
-        month_name_label = QLabel(current_month)
+        # Label con nombre del mes anterior
+        month_name_label = QLabel(last_month_name)
         month_name_label.setAlignment(Qt.AlignCenter)
         month_name_label.setStyleSheet("font-size: 9pt; color: #9CA3AF;")
         self.month_name_label = month_name_label
@@ -221,6 +224,16 @@ class ScrapRateApp(QMainWindow):
         progress_layout.addWidget(self.progress_bar)
         
         main_layout.addWidget(progress_container)
+        
+        # ========== CHECKBOX COMPARACIÓN ==========
+        comparison_container = QHBoxLayout()
+        comparison_container.addStretch()
+        self.comparison_checkbox = QCheckBox("Incluir comparación con período anterior")
+        self.comparison_checkbox.setStyleSheet("font-size: 11pt;")
+        self.comparison_checkbox.setChecked(True)  # Marcado por defecto
+        comparison_container.addWidget(self.comparison_checkbox)
+        comparison_container.addStretch()
+        main_layout.addLayout(comparison_container)
         
         # ========== BOTÓN GENERAR ==========
         generate_container = QHBoxLayout()
@@ -370,14 +383,23 @@ class ScrapRateApp(QMainWindow):
         self.generate_report()
     
     def generate_this_month_report(self):
-        """Genera reporte del mes actual automáticamente"""
+        """Genera reporte del mes anterior completo automáticamente"""
         current_date = datetime.now()
         month_names = [
             "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
             "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
         ]
-        month_name = month_names[current_date.month - 1]
+        
+        # Usar el mes anterior (datos completos)
+        month_number = current_date.month - 1
         year = current_date.year
+        
+        # Si estamos en enero, usar diciembre del año anterior
+        if month_number < 1:
+            month_number = 12
+            year -= 1
+        
+        month_name = month_names[month_number - 1]
         
         # Configurar formulario
         self.year_combo.setCurrentText(str(year))
@@ -416,7 +438,12 @@ class ScrapRateApp(QMainWindow):
                 return
         
         elif report_type == "Mensual":
-            month = self.month_combo.currentText()
+            month_name = self.month_combo.currentText()
+            month_names = [
+                "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+            ]
+            month = month_names.index(month_name) + 1
             kwargs['month'] = month
         
         elif report_type == "Trimestral":
@@ -439,6 +466,10 @@ class ScrapRateApp(QMainWindow):
             kwargs['start_date'] = start_date
             kwargs['end_date'] = end_date
         
+        # Agregar parámetro de comparación (solo para Semanal, Mensual y Trimestral)
+        if report_type in ["Semanal", "Mensual", "Trimestral"]:
+            kwargs['include_comparison'] = self.comparison_checkbox.isChecked()
+        
         # Iniciar generación en thread
         self.show_progress("Iniciando generación...")
         self.current_thread = ReportThread(report_type, year, **kwargs)
@@ -447,6 +478,7 @@ class ScrapRateApp(QMainWindow):
         self.current_thread.finished_success.connect(self.on_success)
         self.current_thread.finished_error.connect(self.on_error)
         self.current_thread.finished_warning.connect(self.on_warning)
+        self.current_thread.finished_exception.connect(self.on_exception)  # Nueva señal
         self.current_thread.start()
     
     def show_progress(self, message):
@@ -490,6 +522,11 @@ class ScrapRateApp(QMainWindow):
         self.hide_progress()
         QMessageBox.warning(self, "Advertencia", message)
     
+    def on_exception(self, exception):
+        """Maneja excepciones capturadas durante la generación"""
+        self.hide_progress()
+        show_error_dialog(exception, self)
+    
     def toggle_theme(self):
         """Alterna entre tema claro y oscuro"""
         self.is_dark_mode = not self.is_dark_mode
@@ -512,12 +549,158 @@ class ScrapRateApp(QMainWindow):
         """Configura la barra de menú"""
         menubar = self.menuBar()
         
+        # Menú Datos
+        data_menu = menubar.addMenu("Datos")
+        
+        # Acción recargar datos
+        self.reload_action = data_menu.addAction("🔄 Recargar Datos")
+        self.reload_action.triggered.connect(self.reload_data_cache)
+        self.reload_action.setStatusTip("Fuerza la recarga de datos desde el archivo Excel")
+        
+        data_menu.addSeparator()
+        
+        # Acción validar datos
+        self.validate_action = data_menu.addAction("✓ Validar Datos")
+        self.validate_action.triggered.connect(self.validate_data)
+        self.validate_action.setStatusTip("Ejecuta validación completa de calidad de datos")
+        
+        data_menu.addSeparator()
+        
+        # Acción gestionar backups
+        self.backups_action = data_menu.addAction("💾 Gestionar Backups")
+        self.backups_action.triggered.connect(self.manage_backups)
+        self.backups_action.setStatusTip("Ver, restaurar y gestionar backups del archivo de datos")
+        
+        data_menu.addSeparator()
+        
+        # Acción historial de reportes
+        self.history_action = data_menu.addAction("📚 Historial de Reportes")
+        self.history_action.triggered.connect(self.show_report_history)
+        self.history_action.setStatusTip("Ver y gestionar reportes generados previamente")
+        
         # Menú Vista
         view_menu = menubar.addMenu("Vista")
         
         # Acción cambiar tema
         self.theme_action = view_menu.addAction("🌙 Modo Claro")
         self.theme_action.triggered.connect(self.toggle_theme)
+        
+        # Menú Ayuda
+        help_menu = menubar.addMenu("Ayuda")
+        
+        # Acción ver logs
+        self.logs_action = help_menu.addAction("📋 Ver Logs")
+        self.logs_action.triggered.connect(self.show_logs)
+        self.logs_action.setStatusTip("Abre el visor de logs de la aplicación")
+    
+    def reload_data_cache(self):
+        """Limpia el caché y fuerza recarga de datos"""
+        from src.processors.data_loader import clear_data_cache
+        
+        reply = QMessageBox.question(
+            self, 
+            "Recargar Datos",
+            "¿Desea limpiar el caché y recargar los datos del archivo Excel?\n\n"
+            "Esto es útil si el archivo fue modificado externamente.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            try:
+                clear_data_cache()
+                QMessageBox.information(
+                    self,
+                    "Caché Limpiado",
+                    "El caché de datos ha sido limpiado exitosamente.\n\n"
+                    "Los datos se recargarán en la próxima generación de reporte."
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Error",
+                    f"Error al limpiar caché:\n\n{str(e)}"
+                )
+    
+    def show_logs(self):
+        """Abre el visor de logs"""
+        try:
+            show_log_viewer(self)
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"No se pudo abrir el visor de logs:\n\n{str(e)}"
+            )
+    
+    def validate_data(self):
+        """Ejecuta validación manual de datos"""
+        try:
+            from src.processors.data_loader import load_data
+            from config import DATA_FILE_PATH
+            
+            # Mostrar mensaje de progreso
+            self.progress_label.setText("Cargando y validando datos...")
+            self.progress_bar.setVisible(True)
+            self.progress_bar.setRange(0, 0)  # Modo indeterminado
+            
+            # Cargar y validar datos
+            scrap_df, ventas_df, horas_df, validation_result = load_data(
+                DATA_FILE_PATH, 
+                force_reload=False,
+                validate=True
+            )
+            
+            # Ocultar progreso
+            self.progress_bar.setVisible(False)
+            self.progress_label.setText("")
+            
+            # Mostrar resultados
+            if validation_result:
+                show_validation_report(validation_result, self)
+            else:
+                QMessageBox.information(
+                    self,
+                    "Validación Completa",
+                    "Los datos fueron validados exitosamente.\n\n"
+                    "No se encontraron problemas."
+                )
+                
+        except Exception as e:
+            self.progress_bar.setVisible(False)
+            self.progress_label.setText("")
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Error durante la validación:\n\n{str(e)}"
+            )
+    
+    def manage_backups(self):
+        """Abre el gestor de backups"""
+        try:
+            from config import DATA_FILE_PATH
+            show_backup_manager(DATA_FILE_PATH, self)
+            
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"No se pudo abrir el gestor de backups:\n\n{str(e)}"
+            )
+    
+    def show_report_history(self):
+        """Abre el diálogo de historial de reportes"""
+        try:
+            from ui.dialogs import ReportHistoryDialog
+            dialog = ReportHistoryDialog(self)
+            dialog.exec()
+            
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"No se pudo abrir el historial de reportes:\n\n{str(e)}"
+            )
 
 
 def run_app():

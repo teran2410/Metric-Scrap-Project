@@ -3,7 +3,10 @@ Módulo para el procesamiento de datos de Scrap, Ventas y Horas
 """
 
 import pandas as pd
+import logging
 from config import TARGET_WEEK_RATES, get_week_number_vectorized
+
+logger = logging.getLogger(__name__)
 
 def process_weekly_data(scrap_df, ventas_df, horas_df, week_number, year):
     """
@@ -20,14 +23,15 @@ def process_weekly_data(scrap_df, ventas_df, horas_df, week_number, year):
     Returns:
         DataFrame: DataFrame con el reporte semanal o None si no hay datos
     """
+    logger.info(f"=== Procesando semana {week_number} del año {year} ===")
     
     # Convertir columnas de fecha a datetime
     scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'])
     ventas_df['Create Date'] = pd.to_datetime(ventas_df['Create Date'])
     horas_df['Trans Date'] = pd.to_datetime(horas_df['Trans Date'])
     
-    # Convertir scrap a positivo (multiplicar por -1)
-    scrap_df['Total Posted'] = scrap_df['Total Posted'] * -1
+    # Convertir scrap a positivo usando valor absoluto (más robusto)
+    scrap_df['Total Posted'] = abs(scrap_df['Total Posted'])
     
     # Agregar columnas de semana DOMINGO-SÁBADO y año (VECTORIZADO)
     scrap_df['Week'] = get_week_number_vectorized(scrap_df['Create Date'], year=year)
@@ -44,6 +48,8 @@ def process_weekly_data(scrap_df, ventas_df, horas_df, week_number, year):
     scrap_week = scrap_df[(scrap_df['Week'] == actual_week_number) & (scrap_df['Year'] == year)]
     ventas_week = ventas_df[(ventas_df['Week'] == actual_week_number) & (ventas_df['Year'] == year)]
     horas_week = horas_df[(horas_df['Week'] == actual_week_number) & (horas_df['Year'] == year)]
+    
+    logger.info(f"Registros filtrados - Scrap: {len(scrap_week)}, Ventas: {len(ventas_week)}, Horas: {len(horas_week)}")
     
     # Agrupar por fecha
     scrap_daily = scrap_week.groupby('Create Date')['Total Posted'].sum()

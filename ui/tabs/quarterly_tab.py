@@ -3,7 +3,7 @@ quarterly_tab.py - Pestaña para reportes trimestrales con PySide6
 """
 
 from PySide6.QtWidgets import (
-    QLabel, QComboBox, QPushButton, QMessageBox, QHBoxLayout
+    QLabel, QComboBox, QPushButton, QMessageBox, QHBoxLayout, QCheckBox
 )
 from PySide6.QtCore import Qt
 from datetime import datetime
@@ -48,6 +48,17 @@ class QuarterlyTab(BaseTab):
         self.main_layout.addLayout(combo_layout)
         
         self.update_quarters_for_year(self.current_year)
+        
+        # Checkbox para comparación de periodos
+        self.comparison_checkbox = QCheckBox("☑️ Incluir comparación con trimestre anterior")
+        self.comparison_checkbox.setStyleSheet("font-size: 11pt;")
+        self.comparison_checkbox.setChecked(False)
+        
+        checkbox_layout = QHBoxLayout()
+        checkbox_layout.addStretch()
+        checkbox_layout.addWidget(self.comparison_checkbox)
+        checkbox_layout.addStretch()
+        self.main_layout.addLayout(checkbox_layout)
         
         self.progress_bar, self.status_label = self.create_progress_bar()
         
@@ -107,7 +118,10 @@ class QuarterlyTab(BaseTab):
             
             self.show_progress(self.progress_bar, self.status_label, self.pdf_button, "⌛ Procesando...")
             
-            self.thread = ReportThread('quarterly', year, quarter=quarter)
+            # Leer estado del checkbox de comparación
+            include_comparison = self.comparison_checkbox.isChecked()
+            
+            self.thread = ReportThread('quarterly', year, quarter=quarter, include_comparison=include_comparison)
             self.thread.progress_update.connect(self.on_progress_update)
             self.thread.progress_percent.connect(lambda x: None)  # Ignorar porcentaje
             self.thread.finished_success.connect(self.on_success)

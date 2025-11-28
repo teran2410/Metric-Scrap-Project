@@ -13,7 +13,7 @@ from src.pdf.components import (
     get_main_table_style, get_contributors_table_style,
     apply_contributors_cumulative_coloring, apply_rate_conditional_coloring
 )
-from config import MONTHS_NUM_TO_ES, TARGET_RATES
+from config import MONTHS_NUM_TO_ES, TARGET_RATES, ANNUAL_REPORTS_FOLDER
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class AnnualPDFGenerator(BasePDFGenerator):
     """PDF Generator for annual scrap rate reports"""
     
-    def __init__(self, output_folder='reports'):
+    def __init__(self, output_folder=ANNUAL_REPORTS_FOLDER):
         super().__init__(output_folder)
     
     def _calculate_target_achievement(self, df):
@@ -143,7 +143,7 @@ class AnnualPDFGenerator(BasePDFGenerator):
         self._add_main_title(f"REPORTE ANUAL DE SCRAP RATE - {year}")
         subtitle_text = f"Año {year} | Reporte generado automáticamente por Metric Scrap System"
         self._add_subtitle(subtitle_text)
-        self._add_spacer(0.3)
+        self._add_spacer(0.15)
         
         # Build and add main table (no target header for annual)
         table_data = self._build_main_table_data(df)
@@ -180,7 +180,7 @@ class AnnualPDFGenerator(BasePDFGenerator):
         return filepath
 
 
-def generate_annual_pdf_report(df, contributors_df, year, scrap_df=None, ventas_df=None, horas_df=None, output_folder='reports'):
+def generate_annual_pdf_report(df, contributors_df, year, scrap_df=None, ventas_df=None, horas_df=None, output_folder=ANNUAL_REPORTS_FOLDER):
     """
     Legacy function interface for backward compatibility
     

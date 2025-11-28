@@ -31,8 +31,8 @@ def process_quarterly_data(scrap_df, ventas_df, horas_df, quarter, year):
     ventas_df['Create Date'] = pd.to_datetime(ventas_df['Create Date'])
     horas_df['Trans Date'] = pd.to_datetime(horas_df['Trans Date'])
     
-    # Convertir scrap a positivo
-    scrap_df['Total Posted'] = scrap_df['Total Posted'] * -1
+    # Convertir scrap a positivo usando valor absoluto (más robusto)
+    scrap_df['Total Posted'] = scrap_df['Total Posted'].abs()
     
     # Agregar columnas de trimestre y año
     scrap_df['Quarter'] = scrap_df['Create Date'].dt.quarter

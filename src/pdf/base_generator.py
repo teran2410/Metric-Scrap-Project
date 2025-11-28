@@ -99,7 +99,7 @@ class BasePDFGenerator:
         header_style = get_target_header_style(within_target)
         header = Paragraph(header_text, header_style)
         self.elements.append(header)
-        self.elements.append(Spacer(1, 0.2 * inch))
+        self.elements.append(Spacer(0.5, 0.3))
     
     def _add_section_title(self, section_text):
         """

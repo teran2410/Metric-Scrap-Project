@@ -41,7 +41,7 @@ class CustomReportThread(QThread):
                     self.finished_success.emit(filepath)
                     return
             
-            scrap_df, ventas_df, horas_df = load_data()
+            scrap_df, ventas_df, horas_df, validation_result = load_data()
             if scrap_df is None:
                 self.finished_error.emit("No se pudo cargar el archivo.\nVerifique que 'test pandas.xlsx' exista en la carpeta 'data/'")
                 return

@@ -4,8 +4,9 @@ Quarterly PDF Report Generator - Refactored to use BasePDFGenerator
 
 import os
 import pandas as pd
-from reportlab.platypus import Table
+from reportlab.platypus import Table, Paragraph
 from reportlab.lib.units import inch
+from reportlab.lib import colors
 import logging
 
 from src.pdf.base_generator import BasePDFGenerator
@@ -13,7 +14,8 @@ from src.pdf.components import (
     get_main_table_style, get_contributors_table_style,
     apply_contributors_cumulative_coloring, apply_rate_conditional_coloring
 )
-from config import MONTHS_NUM_TO_ES, TARGET_RATES
+from config import MONTHS_NUM_TO_ES, TARGET_RATES, QUARTERLY_REPORTS_FOLDER
+from src.analysis.period_comparison import PeriodComparison
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +30,7 @@ QUARTERS_ES = {
 class QuarterlyPDFGenerator(BasePDFGenerator):
     """PDF Generator for quarterly scrap rate reports"""
     
-    def __init__(self, output_folder='reports'):
+    def __init__(self, output_folder=QUARTERLY_REPORTS_FOLDER):
         super().__init__(output_folder)
     
     def _calculate_target_achievement(self, df):
@@ -122,7 +124,128 @@ class QuarterlyPDFGenerator(BasePDFGenerator):
         
         return contrib_data
     
-    def generate(self, df, contributors_df, quarter, year, scrap_df=None):
+    def _add_comparison_section(self, comparison: PeriodComparison):
+        """Add period comparison section to PDF"""
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import Paragraph, TableStyle
+        from reportlab.lib.enums import TA_CENTER
+        
+        styles = getSampleStyleSheet()
+        
+        # Título de sección centrado
+        self._add_spacer(0.3)
+        title_style = ParagraphStyle(
+            'ComparisonTitle',
+            parent=styles['Heading2'],
+            alignment=TA_CENTER,
+            fontSize=12,
+            textColor=colors.HexColor('#333333')
+        )
+        title = Paragraph("<b>COMPARACIÓN CON PERIODO ANTERIOR</b>", title_style)
+        self.elements.append(title)
+        self._add_spacer(0.2)
+        
+        # Construir tabla de comparación
+        comparison_data = [
+            ['Métrica', comparison.previous_label, comparison.period_label, 'Cambio'],
+        ]
+        
+        # Fila de Scrap Rate con indicador
+        rate_indicator = comparison.get_rate_indicator()
+        comparison_data.append([
+            'Scrap Rate',
+            f"{comparison.previous_scrap_rate:.2f}",
+            f"{comparison.current_scrap_rate:.2f}",
+            f"{rate_indicator} {comparison.rate_change_pct:+.1f}%"
+        ])
+        
+        # Fila de Total Scrap con indicador
+        scrap_indicator = comparison.get_scrap_indicator()
+        comparison_data.append([
+            'Total Scrap',
+            f"${comparison.previous_total_scrap:,.0f}",
+            f"${comparison.current_total_scrap:,.0f}",
+            f"{scrap_indicator} {comparison.scrap_change_pct:+.1f}%"
+        ])
+        
+        # Fila de Horas Producción con indicador
+        hours_indicator = "↓" if comparison.hours_change_pct < 0 else ("↑" if comparison.hours_change_pct > 1 else "→")
+        comparison_data.append([
+            'Hrs. Producción',
+            f"{comparison.previous_total_hours:,.0f}",
+            f"{comparison.current_total_hours:,.0f}",
+            f"{hours_indicator} {comparison.hours_change_pct:+.1f}%"
+        ])
+        
+        comparison_table = Table(comparison_data, colWidths=[2.2*inch, 1.8*inch, 1.8*inch, 1.2*inch])
+        
+        table_style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0d47a1')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('ALIGN', (0, 1), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 1), (-1, -1), 'MIDDLE'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOX', (0, 0), (-1, -1), 1.5, colors.black),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#e3f2fd')]),
+        ])
+        
+        if comparison.is_improvement():
+            table_style.add('TEXTCOLOR', (3, 1), (3, 1), colors.HexColor('#2e7d32'))
+            table_style.add('FONTNAME', (3, 1), (3, 1), 'Helvetica-Bold')
+        elif comparison.rate_change_pct > 1:
+            table_style.add('TEXTCOLOR', (3, 1), (3, 1), colors.HexColor('#c62828'))
+            table_style.add('FONTNAME', (3, 1), (3, 1), 'Helvetica-Bold')
+        
+        if comparison.scrap_change_abs < 0:
+            table_style.add('TEXTCOLOR', (3, 2), (3, 2), colors.HexColor('#2e7d32'))
+            table_style.add('FONTNAME', (3, 2), (3, 2), 'Helvetica-Bold')
+        elif comparison.scrap_change_abs > 0:
+            table_style.add('TEXTCOLOR', (3, 2), (3, 2), colors.HexColor('#c62828'))
+            table_style.add('FONTNAME', (3, 2), (3, 2), 'Helvetica-Bold')
+        
+        # Hrs. Producción (fila 3) - Lógica invertida: menos horas = rojo (deterioro)
+        if comparison.hours_change_pct < -1:  # Disminución significativa de horas = ROJO (malo)
+            table_style.add('TEXTCOLOR', (3, 3), (3, 3), colors.HexColor('#c62828'))
+            table_style.add('FONTNAME', (3, 3), (3, 3), 'Helvetica-Bold')
+        elif comparison.hours_change_pct > 1:  # Aumento de horas = VERDE (bueno)
+            table_style.add('TEXTCOLOR', (3, 3), (3, 3), colors.HexColor('#2e7d32'))
+            table_style.add('FONTNAME', (3, 3), (3, 3), 'Helvetica-Bold')
+        else:  # Cambio menor a 1% = GRIS (neutral)
+            table_style.add('TEXTCOLOR', (3, 3), (3, 3), colors.HexColor('#666666'))
+        
+        comparison_table.setStyle(table_style)
+        self.elements.append(comparison_table)
+        
+        self._add_spacer(0.15)
+        note_style = ParagraphStyle(
+            'ComparisonNote',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor=colors.HexColor('#666666'),
+            alignment=TA_CENTER
+        )
+        
+        rate_indicator = comparison.get_rate_indicator()
+        scrap_indicator = comparison.get_scrap_indicator()
+        hours_indicator = '→' if abs(comparison.hours_change_pct) < 1 else ('↓' if comparison.hours_change_pct < 0 else '↑')
+        
+        note = Paragraph(
+            f"<i><font color='#2e7d32'><b>↓</b></font> = Mejora (reducción) | "
+            f"<font color='#c62828'><b>↑</b></font> = Deterioro (aumento) | "
+            f"<font color='#666666'><b>→</b></font> = Sin cambio significativo (&lt;1%)<br/>"
+            f"<b>Indicadores:</b> Scrap Rate {rate_indicator} | Total Scrap {scrap_indicator} | Horas Prod. {hours_indicator}</i>",
+            note_style
+        )
+        self.elements.append(note)
+    
+    def generate(self, df, contributors_df, quarter, year, scrap_df=None, comparison=None):
         """
         Generate quarterly PDF report
         
@@ -132,6 +255,7 @@ class QuarterlyPDFGenerator(BasePDFGenerator):
             quarter: Quarter number (1-4)
             year: Year (e.g., 2025)
             scrap_df: Optional detailed scrap data
+            comparison: Optional PeriodComparison object for period comparison
             
         Returns:
             str: Path to generated PDF file, or None if failed
@@ -162,11 +286,15 @@ class QuarterlyPDFGenerator(BasePDFGenerator):
         self._add_main_title("REPORTE TRIMESTRAL DE SCRAP RATE")
         subtitle_text = f"{quarter_name} | Año {year} | Reporte generado automáticamente por Metric Scrap System"
         self._add_subtitle(subtitle_text)
-        self._add_spacer(0.3)
+        self._add_spacer(0.15)
         
         # Calculate target achievement
         within, total_rate, target_rate = self._calculate_target_achievement(df)
         self._add_target_header(within)
+        
+        # Add comparison section if provided
+        if comparison is not None:
+            self._add_comparison_section(comparison)
         
         # Build and add main table
         table_data = self._build_main_table_data(df)
@@ -203,11 +331,14 @@ class QuarterlyPDFGenerator(BasePDFGenerator):
         return filepath
 
 
-def generate_quarterly_pdf_report(df, contributors_df, quarter, year, scrap_df=None, output_folder='reports'):
+def generate_quarterly_pdf_report(df, contributors_df, quarter, year, scrap_df=None, comparison=None, output_folder=QUARTERLY_REPORTS_FOLDER):
     """
     Legacy function interface for backward compatibility
     
     Generates a quarterly PDF report using the new architecture
     """
+    if comparison:
+        logger.info(f"Comparación incluida: {comparison.period_label} vs {comparison.previous_label}")
+    
     generator = QuarterlyPDFGenerator(output_folder)
-    return generator.generate(df, contributors_df, quarter, year, scrap_df)
+    return generator.generate(df, contributors_df, quarter, year, scrap_df, comparison)

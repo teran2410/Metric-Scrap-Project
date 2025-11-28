@@ -3,7 +3,7 @@ monthly_tab.py - Pestaña para reportes mensuales con PySide6
 """
 
 from PySide6.QtWidgets import (
-    QLabel, QComboBox, QPushButton, QMessageBox, QHBoxLayout
+    QLabel, QComboBox, QPushButton, QMessageBox, QHBoxLayout, QCheckBox
 )
 from PySide6.QtCore import Qt
 from datetime import datetime
@@ -47,6 +47,17 @@ class MonthlyTab(BaseTab):
         
         # Actualizar meses disponibles
         self.update_months_for_year(self.current_year)
+        
+        # Checkbox para comparación de periodos
+        self.comparison_checkbox = QCheckBox("☑️ Incluir comparación con mes anterior")
+        self.comparison_checkbox.setStyleSheet("font-size: 11pt;")
+        self.comparison_checkbox.setChecked(False)
+        
+        checkbox_layout = QHBoxLayout()
+        checkbox_layout.addStretch()
+        checkbox_layout.addWidget(self.comparison_checkbox)
+        checkbox_layout.addStretch()
+        self.main_layout.addLayout(checkbox_layout)
         
         # Barra de progreso
         self.progress_bar, self.status_label = self.create_progress_bar()
@@ -111,8 +122,11 @@ class MonthlyTab(BaseTab):
             # Mostrar progreso
             self.show_progress(self.progress_bar, self.status_label, self.pdf_button, "⌛ Procesando...")
             
+            # Leer estado del checkbox de comparación
+            include_comparison = self.comparison_checkbox.isChecked()
+            
             # Crear y conectar thread unificado
-            self.thread = ReportThread('monthly', year, month=month)
+            self.thread = ReportThread('monthly', year, month=month, include_comparison=include_comparison)
             self.thread.progress_update.connect(self.on_progress_update)
             self.thread.progress_percent.connect(lambda x: None)
             self.thread.finished_success.connect(lambda msg: self.on_success_unified(msg))

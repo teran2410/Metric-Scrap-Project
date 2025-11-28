@@ -43,8 +43,12 @@ def process_monthly_data(scrap_df, ventas_df, horas_df, month, year):
     horas_year = horas_df[horas_df['Year'] == year].copy()
     
     # Determinar las semanas del mes usando el mapeo fiscal si está disponible
-    # Convertir el nombre del mes a número (1-12) usando el diccionario de config.py
-    month_num = MONTHS_ES_TO_NUM.get(month, 0)
+    # month puede venir como número (1-12) o como string ("Enero")
+    if isinstance(month, int):
+        month_num = month
+    else:
+        # Convertir el nombre del mes a número (1-12) usando el diccionario de config.py
+        month_num = MONTHS_ES_TO_NUM.get(month, 0)
     
     weeks_in_month = None
     if year == 2025 and WEEK_MONTH_MAPPING_2025 and month_num in WEEK_MONTH_MAPPING_2025:

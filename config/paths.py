@@ -27,7 +27,10 @@ APP_ICON_PATH = "assets/icon.ico"  # Formato soportado: .ico, .png (NO .svg)
 # ============================================
 REPORTS_FOLDER = "reports"
 WEEK_REPORTS_FOLDER = "H:/Ingenieria/Ing. Procesos/Metricos FA/Metrico Scrap/2025/reportes/semanales"
-MONTHLY_REPORTS_FOLDER = ''  # Por definir
+MONTHLY_REPORTS_FOLDER = "H:/Ingenieria/Ing. Procesos/Metricos FA/Metrico Scrap/2025/reportes/mensuales"
+QUARTERLY_REPORTS_FOLDER = "H:/Ingenieria/Ing. Procesos/Metricos FA/Metrico Scrap/2025/reportes/trimestrales"
+ANNUAL_REPORTS_FOLDER = "H:/Ingenieria/Ing. Procesos/Metricos FA/Metrico Scrap/2025/reportes/anuales"
+CUSTOM_REPORTS_FOLDER = "H:/Ingenieria/Ing. Procesos/Metricos FA/Metrico Scrap/2025/reportes/custom"
 TOP_CONTRIBUTORS_COUNT = 10  # Número de principales contribuidores a mostrar
 
 # ============================================
