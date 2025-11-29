@@ -87,16 +87,22 @@ class KPICard(QFrame):
             font-weight: bold;
         """)
     
-    def set_comparison(self, text: str, is_positive: bool = True):
+    def set_comparison(self, text: str, is_positive: bool = True, invert_arrow: bool = False):
         """
         Establece el texto de comparación
         
         Args:
             text: Texto de comparación
             is_positive: Si es un cambio positivo (verde) o negativo (rojo)
+            invert_arrow: Si se debe invertir la dirección de la flecha (para métricas donde menor es mejor)
         """
         color = "#4caf50" if is_positive else "#f44336"
-        arrow = "↑" if is_positive else "↓"
+        
+        # Para métricas donde menor es mejor (como scrap), invertir la flecha
+        if invert_arrow:
+            arrow = "↓" if is_positive else "↑"
+        else:
+            arrow = "↑" if is_positive else "↓"
         
         self.comparison_label.setText(f"{arrow} {text}")
         self.comparison_label.setStyleSheet(f"""

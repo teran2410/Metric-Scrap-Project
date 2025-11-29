@@ -1,8 +1,35 @@
 # 🚀 GUÍA DE DESARROLLO - Metric Scrap Project
 
-> **Última actualización:** Noviembre 2025  
+> **Última actualización:** 29 de Noviembre 2025  
 > **Arquitectura:** Post-FASE 2 (Modular + Herencia)  
-> **Python:** 3.12+ | **Framework GUI:** PySide6 6.10.1
+> **Python:** 3.12+ | **Framework GUI:** PySide6 6.10.1  
+> **Estado Actual:** Dashboard dinámico con KPIs por periodo + UX refinado
+
+---
+
+## 📝 Historial de Cambios Recientes
+
+### 29/11/2025 - Refinamiento de UX Dashboard
+**Mejoras implementadas:**
+- ✅ Flechas invertidas en KPIs de Scrap (↓ verde = mejora, ↑ roja = empeora)
+- ✅ KPI comparisons adaptadas por periodo ("la semana anterior", "el mes anterior", etc.)
+- ✅ Etiquetas de valores en puntos de gráficos (2 decimales)
+- ✅ Posicionamiento inteligente de etiquetas (dentro/fuera de meta)
+- ✅ Líneas de target dinámicas según configuración
+- ✅ Carga asíncrona de datos en dashboard (UI no bloqueante)
+
+**Archivos modificados:**
+- `ui/widgets/kpi_card.py` - Parámetro `invert_arrow` para invertir dirección de flechas
+- `ui/tabs/dashboard_tab.py` - Uso de `invert_arrow=True` en Scrap Rate y Total Scrap
+- `src/analysis/kpi_calculator.py` - Campo `period_label` en DashboardKPIs
+- `src/analysis/period_kpi_calculator.py` - Labels dinámicos por periodo
+
+**Próxima mejora planificada:**
+- 🚀 **Mejora #21:** Ventana de Bienvenida con Pre-carga de Datos (ALTA prioridad)
+  - Splash screen con carga en background
+  - Singleton GlobalDataStore para compartir datos entre módulos
+  - Ventana de selección: Dashboard vs Generador de Reportes
+  - Datos pre-cargados para experiencia instantánea
 
 ---
 

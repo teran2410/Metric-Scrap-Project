@@ -287,6 +287,151 @@
 
 ---
 
+### 🚀 Mejora #21: Ventana de Bienvenida con Pre-carga de Datos 🎯
+**Prioridad:** 🔴 ALTA  
+**Estado:** ⏳ **Pendiente**  
+**Estimación:** 3-4 horas
+
+**Problema:**
+- La app tarda mucho en cargar (~16 segundos) al abrir Dashboard o Generador de Reportes
+- El usuario debe esperar mirando una interfaz vacía o congelada
+- Cada módulo carga los datos independientemente (redundante)
+- No hay feedback visual durante la carga inicial
+- Experiencia de usuario poco profesional
+
+**Solución Propuesta:**
+- **Ventana de Bienvenida (Splash Screen)** al iniciar la app:
+  - Logo de la empresa centrado
+  - Barra de progreso con porcentaje
+  - Mensajes informativos ("Cargando datos...", "Validando estructura...", etc.)
+  - Carga de datos en background thread (no bloqueante)
+  - Diseño profesional y moderno
+  
+- **Pre-carga de Datos Global:**
+  - Cargar una sola vez al iniciar: scrap_df, ventas_df, horas_df
+  - Almacenar en singleton/cache global accessible por todos los módulos
+  - Validación automática durante la carga
+  - Timestamp de última carga visible en la app
+  
+- **Ventana de Selección de Módulo:**
+  - 2 botones grandes con iconos:
+    - 📊 **Dashboard** - Ver métricas y KPIs en tiempo real
+    - 📄 **Generador de Reportes** - Crear reportes PDF personalizados
+  - Descripción breve de cada módulo
+  - Botones deshabilitados hasta que termine la carga
+  - Indicador de datos cargados (timestamp + tamaño)
+  
+- **Beneficios Esperados:**
+  - ✅ Dashboard abre instantáneamente (datos ya en memoria)
+  - ✅ Generador de reportes también instantáneo
+  - ✅ Carga única compartida entre módulos (eficiente)
+  - ✅ Feedback visual profesional durante carga
+  - ✅ Usuario sabe exactamente qué está pasando
+  - ✅ Opción de recargar datos manualmente sin reiniciar app
+
+**Implementación Propuesta:**
+
+1. **src/utils/data_store.py** (NUEVO):
+   ```python
+   class GlobalDataStore:
+       """Singleton para almacenar datos cargados globalmente"""
+       _instance = None
+       _data_loaded = False
+       _scrap_df = None
+       _ventas_df = None
+       _horas_df = None
+       _load_timestamp = None
+       
+       @classmethod
+       def get_instance(cls):
+           if cls._instance is None:
+               cls._instance = cls()
+           return cls._instance
+       
+       def load_data(self):
+           """Carga datos desde Excel"""
+           # Implementación con logging y progress signals
+       
+       def get_data(self):
+           """Retorna tupla (scrap_df, ventas_df, horas_df)"""
+           return (self._scrap_df, self._ventas_df, self._horas_df)
+       
+       def is_loaded(self):
+           """Verifica si los datos ya están cargados"""
+           return self._data_loaded
+   ```
+
+2. **ui/splash_screen.py** (NUEVO):
+   ```python
+   class SplashScreen(QDialog):
+       """Ventana de carga inicial con barra de progreso"""
+       data_loaded = Signal()  # Señal cuando termina la carga
+       
+       def __init__(self):
+           # Logo
+           # Progress bar
+           # Status label
+           # DataLoadThread
+   ```
+
+3. **ui/welcome_screen.py** (NUEVO):
+   ```python
+   class WelcomeScreen(QMainWindow):
+       """Ventana de selección: Dashboard o Generador"""
+       
+       def __init__(self):
+           # 2 botones grandes con iconos y descripciones
+           # Indicador de datos cargados
+           # Botón de recarga de datos
+   ```
+
+4. **Modificar main.py:**
+   ```python
+   def main():
+       app = QApplication(sys.argv)
+       
+       # 1. Mostrar splash screen con carga de datos
+       splash = SplashScreen()
+       splash.show()
+       
+       # 2. Al terminar carga, mostrar welcome screen
+       welcome = WelcomeScreen()
+       splash.data_loaded.connect(lambda: show_welcome(splash, welcome))
+       
+       sys.exit(app.exec())
+   ```
+
+5. **Modificar ui/app.py:**
+   - Recibir datos desde GlobalDataStore en lugar de cargar
+   - Agregar botón "Actualizar Datos" en menubar
+   - Mostrar timestamp de última carga en status bar
+
+**Archivos a Crear:**
+- `src/utils/data_store.py` - Singleton de datos globales
+- `ui/splash_screen.py` - Ventana de carga inicial
+- `ui/welcome_screen.py` - Ventana de selección de módulo
+
+**Archivos a Modificar:**
+- `main.py` - Flujo de inicio de la app
+- `ui/app.py` - Usar GlobalDataStore en lugar de load_data()
+- `ui/tabs/dashboard_tab.py` - Obtener datos del store
+- `ui/report_thread.py` - Obtener datos del store
+- `src/processors/data_loader.py` - Agregar método para singleton
+
+**Consideraciones Técnicas:**
+- Usar QThread para carga asíncrona (no bloquear UI)
+- Señales de progreso: 0-25% (scrap), 25-50% (ventas), 50-75% (horas), 75-100% (validación)
+- Manejo de errores: si falla la carga, mostrar error y opción de reintentar
+- Caché persistente opcional (guardar pickle para arranques más rápidos)
+- Splash screen con timer mínimo (1 segundo) para evitar parpadeo
+
+**Diseño Visual:**
+- Splash Screen: Fondo azul corporativo (#2F6690), logo centrado, barra blanca
+- Welcome Screen: 2 cards lado a lado con hover effects, iconos grandes, texto descriptivo
+- Estilo consistente con theme_manager.py existente
+
+---
+
 ### ✅ Mejora #6: Dashboard de KPIs 📊
 **Prioridad:** 🟡 MEDIA  
 **Estado:** ✅ **COMPLETADA** (28/11/2025)  
@@ -876,10 +1021,11 @@
 
 ## 📊 Resumen de Prioridades
 
-### 🔴 ALTA (3 - Todas completadas ✅)
+### 🔴 ALTA (4 - 3 completadas ✅, 1 pendiente)
 1. ✅ Sistema de Caché (#1)
 2. ✅ Logging y Diagnóstico (#10)
 3. ✅ Manejo de Errores Mejorado (#19)
+4. ⏳ Ventana de Bienvenida con Pre-carga (#21) - **SIGUIENTE**
 
 ### 🟠 MEDIA-ALTA (3 - Todas completadas ✅)
 4. ✅ Validación de Datos (#3)
@@ -900,7 +1046,7 @@
 13. 🔮 Análisis de Tendencias (#16) - Requiere datos de forecast/planeación
 14. 🔮 Predicción Simple (#17) - Requiere datos de forecast/planeación
 
-**Resumen:** 8 de 13 mejoras completadas (62%), 2 pospuestas para futuro
+**Resumen:** 8 de 14 mejoras completadas (57%), 2 pospuestas para futuro, 4 pendientes
 
 ---
 
@@ -914,6 +1060,6 @@
 
 ---
 
-**Última actualización:** 28 de noviembre de 2025  
+**Última actualización:** 29 de noviembre de 2025  
 **Responsable:** Oscar Teran  
 **Proyecto:** Metric Scrap Project - NavicoGroup

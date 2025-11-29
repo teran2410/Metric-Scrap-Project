@@ -141,6 +141,7 @@ def _calculate_week_kpis(scrap_df: pd.DataFrame,
             scrap_change_pct=scrap_change_pct,
             hours_change_pct=hours_change_pct,
             total_sales=total_sales,
+            period_label="semana",
             top_contributors=top_contributors,
             historical_weeks=historical,
             alerts=alerts
@@ -295,6 +296,7 @@ def _calculate_month_kpis(scrap_df: pd.DataFrame,
             scrap_change_pct=scrap_change_pct,
             hours_change_pct=hours_change_pct,
             total_sales=total_sales,
+            period_label="mes",
             top_contributors=top_contributors,
             historical_weeks=historical,
             alerts=alerts
@@ -456,6 +458,7 @@ def _calculate_quarter_kpis(scrap_df: pd.DataFrame,
             scrap_change_pct=scrap_change_pct,
             hours_change_pct=hours_change_pct,
             total_sales=total_sales,
+            period_label="trimestre",
             top_contributors=top_contributors,
             historical_weeks=historical,
             alerts=alerts
@@ -598,6 +601,7 @@ def _calculate_year_kpis(scrap_df: pd.DataFrame,
             scrap_change_pct=scrap_change_pct,
             hours_change_pct=hours_change_pct,
             total_sales=total_sales,
+            period_label="año",
             top_contributors=top_contributors,
             historical_weeks=historical,
             alerts=alerts
@@ -750,6 +754,7 @@ def _calculate_custom_kpis(scrap_df: pd.DataFrame,
             scrap_change_pct=scrap_change_pct,
             hours_change_pct=hours_change_pct,
             total_sales=total_sales,
+            period_label="periodo",
             top_contributors=top_contributors,
             historical_weeks=historical,
             alerts=alerts
@@ -877,6 +882,146 @@ def get_top_locations_for_period(scrap_df: pd.DataFrame,
         
     except Exception as e:
         logger.error(f"Error obteniendo top locations: {e}")
+        return []
+
+
+def get_weekly_scrap_rates_for_year(scrap_df: pd.DataFrame,
+                                    ventas_df: pd.DataFrame,
+                                    horas_df: pd.DataFrame,
+                                    year: int) -> List[Dict]:
+    """
+    Obtiene el scrap rate de todas las semanas de un año
+    
+    Args:
+        scrap_df, ventas_df, horas_df: DataFrames de datos
+        year: Año a analizar
+        
+    Returns:
+        Lista de dict con: week, scrap_rate, meets_target, has_data
+    """
+    try:
+        from src.analysis.kpi_calculator import calculate_weekly_kpi
+        
+        results = []
+        current_week = datetime.now().isocalendar()[1]
+        current_year = datetime.now().year
+        max_week = 52 if year < current_year else current_week
+        
+        logger.info(f"Obteniendo scrap rates semanales para año {year}, hasta semana {max_week}")
+        
+        for week in range(1, max_week + 1):
+            kpi = calculate_weekly_kpi(scrap_df, ventas_df, horas_df, week, year)
+            
+            if kpi and kpi.total_scrap > 0:
+                target = TARGET_WEEK_RATES.get(week, 0.5)  # Default 0.5%
+                meets_target = kpi.scrap_rate <= target
+                
+                results.append({
+                    'week': week,
+                    'scrap_rate': kpi.scrap_rate,
+                    'target': target,
+                    'meets_target': meets_target,
+                    'has_data': True
+                })
+            else:
+                results.append({
+                    'week': week,
+                    'scrap_rate': 0,
+                    'target': TARGET_WEEK_RATES.get(week, 0.5),
+                    'meets_target': True,
+                    'has_data': False
+                })
+        
+        logger.info(f"Obtenidas {len(results)} semanas, {len([r for r in results if r['has_data']])} con datos")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo scrap rates semanales: {e}", exc_info=True)
+        return []
+
+
+def get_monthly_scrap_rates_for_year(scrap_df: pd.DataFrame,
+                                      ventas_df: pd.DataFrame,
+                                      horas_df: pd.DataFrame,
+                                      year: int) -> List[Dict]:
+    """
+    Obtiene el scrap rate de todos los meses de un año
+    
+    Args:
+        scrap_df, ventas_df, horas_df: DataFrames de datos
+        year: Año a analizar
+        
+    Returns:
+        Lista de dict con: month, month_name, scrap_rate, meets_target, has_data
+    """
+    try:
+        # Asegurar tipos de fecha
+        scrap_df = scrap_df.copy()
+        horas_df = horas_df.copy()
+        
+        scrap_df['Create Date'] = pd.to_datetime(scrap_df['Create Date'])
+        # Horas usa 'Trans Date' en lugar de 'Create Date'
+        horas_df['Trans Date'] = pd.to_datetime(horas_df['Trans Date'])
+        
+        results = []
+        current_month = datetime.now().month
+        current_year = datetime.now().year
+        max_month = 12 if year < current_year else current_month
+        
+        month_names = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", 
+                      "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+        
+        logger.info(f"Obteniendo scrap rates mensuales para año {year}, hasta mes {max_month}")
+        
+        for month in range(1, max_month + 1):
+            # Filtrar por mes
+            scrap_month = scrap_df[(scrap_df['Create Date'].dt.year == year) & 
+                                   (scrap_df['Create Date'].dt.month == month)]
+            horas_month = horas_df[(horas_df['Trans Date'].dt.year == year) & 
+                                   (horas_df['Trans Date'].dt.month == month)]
+            
+            if not scrap_month.empty and not horas_month.empty:
+                total_scrap = abs(scrap_month['Total Posted'].sum())
+                total_hours = horas_month['Actual Hours'].sum()
+                
+                if total_hours > 0:
+                    # Usar la misma fórmula que en semanal: scrap/horas
+                    scrap_rate = (total_scrap / total_hours)
+                    target = TARGET_RATES.get(month, 0.5)  # Target en decimal (0.5%)
+                    meets_target = scrap_rate <= target
+                    
+                    results.append({
+                        'month': month,
+                        'month_name': month_names[month - 1],
+                        'scrap_rate': scrap_rate,
+                        'target': target,
+                        'meets_target': meets_target,
+                        'has_data': True
+                    })
+                else:
+                    results.append({
+                        'month': month,
+                        'month_name': month_names[month - 1],
+                        'scrap_rate': 0,
+                        'target': TARGET_RATES.get(month, 0.5),
+                        'meets_target': True,
+                        'has_data': False
+                    })
+            else:
+                results.append({
+                    'month': month,
+                    'month_name': month_names[month - 1],
+                    'scrap_rate': 0,
+                    'target': TARGET_RATES.get(month, 0.5),
+                    'meets_target': True,
+                    'has_data': False
+                })
+        
+        logger.info(f"Obtenidos {len(results)} meses, {len([r for r in results if r['has_data']])} con datos")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo scrap rates mensuales: {e}", exc_info=True)
         return []
 
 

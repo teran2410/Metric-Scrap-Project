@@ -43,9 +43,10 @@ class DashboardKPIs:
     previous_week_rate: Optional[float] = None
     rate_change_pct: Optional[float] = None
     trend_direction: str = "neutral"  # "improving", "deteriorating", "neutral"
-    scrap_change_pct: Optional[float] = None  # % cambio en scrap vs semana anterior
-    hours_change_pct: Optional[float] = None  # % cambio en horas vs semana anterior
-    total_sales: Optional[float] = None  # Total de ventas de la semana
+    scrap_change_pct: Optional[float] = None  # % cambio en scrap vs periodo anterior
+    hours_change_pct: Optional[float] = None  # % cambio en horas vs periodo anterior
+    total_sales: Optional[float] = None  # Total de ventas del periodo
+    period_label: str = "semana"  # "semana", "mes", "trimestre", "año", "periodo"
     
     # Top contributors
     top_contributors: List[Dict] = None
