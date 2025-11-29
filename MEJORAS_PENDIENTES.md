@@ -290,25 +290,41 @@
 ### ✅ Mejora #6: Dashboard de KPIs 📊
 **Prioridad:** 🟡 MEDIA  
 **Estado:** ✅ **COMPLETADA** (28/11/2025)  
-**Tiempo real:** 3.5 horas  
+**Tiempo real:** 6 horas  
 **Estimación original:** 3-4 horas
 
 **Problema:**
 - No hay visibilidad rápida del estado actual sin generar PDF
 - Usuario debe generar reporte completo para ver métricas básicas
 - Falta vista de resumen ejecutivo
+- Solo muestra última semana, no permite consultar otros periodos
+- No hay gráficos de análisis por item o ubicación
 
 **Solución Implementada:**
 - ✅ Dashboard completo con KPIs en tiempo real
 - ✅ Vista modal accesible desde menú "Ver → 📊 Dashboard"
 - ✅ KPIs principales: Scrap Rate actual, Total Scrap, Horas Producción
 - ✅ Métricas secundarias: Target, Varianza, Semana Fiscal
-- ✅ Gráfico de tendencia últimas 4 semanas
+- ✅ Gráfico de tendencia histórica adaptada por periodo
 - ✅ Top 3 contributors con montos y porcentajes
 - ✅ Sistema de alertas con severidad (critical, warning, info, success)
 - ✅ Botón de refresh manual para actualizar datos
 - ✅ Timestamp de última actualización
 - ✅ Carga de datos en background (no bloquea UI)
+- ✅ **FILTRADO DINÁMICO DE PERIODOS** (6 tipos):
+  - Última Semana (auto-detecta última con datos)
+  - Semana Específica (1-52, años 2020-2030)
+  - Mes Específico (12 meses, años 2020-2030)
+  - Trimestre (Q1-Q4, años 2020-2030)
+  - Año Completo (2020-2030)
+  - Rango Personalizado (date pickers)
+- ✅ **GRÁFICOS DE ANÁLISIS**:
+  - Top 10 Items por Scrap ($ USD) - barras horizontales azules
+  - Top 10 Celdas por Scrap ($ USD) - barras horizontales naranjas
+  - Actualización dinámica según periodo seleccionado
+- ✅ Panel de filtros con controles dinámicos
+- ✅ Comparación vs periodo anterior adaptada por tipo
+- ✅ Contraste de texto mejorado (negro sobre blanco)
 
 **Implementación:**
 
@@ -328,6 +344,32 @@
        - Mejora sostenida (cumple target 3+ semanas)
      - `calculate_dashboard_kpis()`: Función principal que orquesta todo
 
+1b. **src/analysis/period_kpi_calculator.py** (940+ líneas) - NUEVO:
+   - Sistema completo de cálculo de KPIs por periodo
+   - Funciones principales:
+     - `calculate_period_kpis()`: Router que despacha según tipo de periodo
+     - `_calculate_week_kpis()`: KPIs para semanas específicas
+     - `_calculate_month_kpis()`: Agregación mensual con comparación vs mes anterior
+     - `_calculate_quarter_kpis()`: Agregación trimestral (Q1-Q4) con comparación
+     - `_calculate_year_kpis()`: Agregación anual con comparación vs año anterior
+     - `_calculate_custom_kpis()`: Rango personalizado con comparación equivalente
+     - `get_period_label()`: Genera etiquetas legibles ("Semana 47/2025", "Q4 2025", etc.)
+     - `get_top_items_for_period()`: Top N items por periodo con filtrado universal
+     - `get_top_locations_for_period()`: Top N ubicaciones por periodo
+     - `_filter_by_period()`: Función universal de filtrado para todos los tipos
+   - Manejo de comparaciones:
+     - Semana vs semana anterior (rollover año)
+     - Mes vs mes anterior (rollover año)
+     - Trimestre vs trimestre anterior (rollover año)
+     - Año vs año anterior
+     - Custom vs periodo equivalente anterior (calculado con timedelta)
+   - Tendencia histórica adaptada:
+     - Semanas: últimas 4
+     - Meses: últimos 6
+     - Trimestres: últimos 4
+     - Años: últimos 3
+     - Custom: segmentado en máximo 6 periodos
+
 2. **ui/widgets/kpi_card.py** (360 líneas):
    - `KPICard`: Tarjeta grande para KPIs principales
      - Valor principal con color dinámico
@@ -344,23 +386,56 @@
      - Ejes dinámicos según rango de datos
      - Animaciones suaves
 
-3. **ui/tabs/dashboard_tab.py** (480 líneas):
+3. **ui/tabs/dashboard_tab.py** (1020 líneas) - AMPLIADO:
    - Layout completo con scroll area
-   - Header con título y botón refresh
+   - **Panel de Filtros Dinámico** (nuevo):
+     - QComboBox para selección de tipo de periodo (6 opciones)
+     - Widgets dinámicos que aparecen según selección:
+       - SpinBox para semana (1-52) y año (2020-2030)
+       - ComboBox para mes (Enero-Diciembre) + SpinBox de año
+       - ComboBox para trimestre (Q1-Q4) + SpinBox de año
+       - SpinBox solo para año (reporte anual)
+       - QDateEdit con calendarios para rango personalizado (inicio-fin)
+     - Botón "Aplicar Filtro" que dispara recarga
+     - Estilo con contraste negro sobre fondo claro
+   - Header con título dinámico (muestra periodo seleccionado) y botón refresh
    - Sección KPIs: 3 tarjetas grandes + 3 métricas secundarias
-   - Sección Gráfico: TrendChart con altura mínima 300px
+   - Sección Gráfico Tendencia: TrendChart con altura mínima 300px
+   - **Sección Gráficos de Análisis** (nuevo):
+     - `_create_items_chart_section()`: Top 10 Items por Scrap
+       - QChart con QHorizontalBarSeries (barras horizontales)
+       - Color azul (#1976d2)
+       - QBarCategoryAxis en Y (códigos de items)
+       - QValueAxis en X (montos en USD)
+       - Altura mínima 350px
+     - `_create_locations_chart_section()`: Top 10 Celdas por Scrap
+       - QChart con QHorizontalBarSeries
+       - Color naranja (#ff9800)
+       - QBarCategoryAxis en Y (nombres de celdas)
+       - QValueAxis en X (montos en USD)
+       - Altura mínima 350px
    - Sección Bottom: Top Contributors y Alertas lado a lado
-   - Método `update_dashboard()`: Actualiza todos los componentes
+   - Método `update_dashboard()`: Actualiza todos los componentes incluyendo gráficos
    - Métodos helper:
      - `_update_main_kpis()`: Actualiza tarjetas principales
-     - `_update_trend_chart()`: Actualiza gráfico
+     - `_update_trend_chart()`: Actualiza gráfico de tendencia
+     - `_update_items_chart()`: Carga datos, filtra por periodo, crea barras horizontales
+     - `_update_locations_chart()`: Similar a items pero para ubicaciones
      - `_update_contributors()`: Actualiza lista de contributors
      - `_update_alerts()`: Limpia y agrega nuevas alertas
+     - `_on_period_type_changed()`: Muestra/oculta controles según tipo seleccionado
+     - `_on_apply_filter()`: Captura config de periodo y dispara recarga
    - Estados: `show_loading()`, `show_error()`
+   - Atributos de estado: `current_period_type`, `current_period_data`
 
-4. **ui/dialogs/dashboard_dialog.py** (120 líneas):
+4. **ui/dialogs/dashboard_dialog.py** (140 líneas) - MODIFICADO:
    - `DashboardLoadThread`: Thread para cargar datos sin bloquear UI
+     - Nuevo parámetro `period_config` (Dict con tipo y parámetros de periodo)
+     - Usa `calculate_period_kpis()` en lugar de `calculate_dashboard_kpis()`
+     - Imports de `period_kpi_calculator` y `get_period_label()`
    - `DashboardDialog`: Diálogo modal 1200x800px
+   - Método `_load_data()`: Lee `current_period_data` del dashboard tab
+   - Método `_on_data_loaded()`: Actualiza título dinámico con periodo seleccionado
    - Carga automática al abrir
    - Botón refresh conectado a recarga
    - Manejo de errores con mensajes
@@ -382,30 +457,48 @@
 
 **Archivos Creados:**
 - `src/analysis/kpi_calculator.py` (420 líneas)
+- `src/analysis/period_kpi_calculator.py` (940+ líneas) - NUEVO
 - `ui/widgets/__init__.py` (6 líneas)
 - `ui/widgets/kpi_card.py` (360 líneas)
-- `ui/tabs/dashboard_tab.py` (480 líneas)
-- `ui/dialogs/dashboard_dialog.py` (120 líneas)
+- `ui/tabs/dashboard_tab.py` (1020 líneas) - AMPLIADO
+- `ui/dialogs/dashboard_dialog.py` (140 líneas) - MODIFICADO
 
 **Archivos Modificados:**
 - `ui/dialogs/__init__.py` - Exporta DashboardDialog
 - `ui/app.py` - Menú Ver y función show_dashboard()
 
 **Características Técnicas:**
-- Compatible con PySide6
+- Compatible con PySide6 (Qt6)
 - Responsive layout con scroll
-- Colores corporativos (azul #1976d2 para primary)
-- Gráficos con Qt Charts (anti-aliasing, animaciones)
+- Colores corporativos (azul #1976d2 para primary, naranja #ff9800 para secundario)
+- Gráficos con Qt Charts:
+  - QLineSeries para tendencias (anti-aliasing, animaciones)
+  - QHorizontalBarSeries para análisis (barras horizontales)
+  - QBarCategoryAxis y QValueAxis para ejes
+  - Formato de valores en USD ($)
 - Código modular y reutilizable
 - Logging detallado en todas las funciones
 - Manejo robusto de errores
+- Widgets dinámicos (QComboBox, QSpinBox, QDateEdit)
+- Filtrado universal de DataFrames por cualquier periodo
+- Carga en background thread (no bloquea UI)
+
+**Funcionalidades Implementadas:**
+- ✅ Filtrado dinámico por 6 tipos de periodo
+- ✅ Gráficos de barras horizontales (items y ubicaciones)
+- ✅ Comparación inteligente según tipo de periodo
+- ✅ Tendencia histórica adaptada
+- ✅ Top contributors dinámicos por periodo
+- ✅ Alertas contextuales
+- ✅ Contraste de texto mejorado
 
 **Próximas mejoras opcionales:**
 - [ ] Auto-refresh cada N minutos
 - [ ] Exportar dashboard como imagen PNG
-- [ ] Comparación con múltiples periodos anteriores
-- [ ] Filtros por celda/ubicación
+- [ ] Gráfico de torta para distribución porcentual
+- [ ] Filtros adicionales por celda/ubicación específica
 - [ ] Configuración de alertas personalizadas
+- [ ] Comparación lado a lado de dos periodos
 
 ---
 

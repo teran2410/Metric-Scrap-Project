@@ -14,10 +14,11 @@
 4. [Sistema de PDF](#-sistema-de-pdf)
 5. [Procesadores de Datos](#-procesadores-de-datos)
 6. [Análisis y Contribuidores](#-análisis-y-contribuidores)
-7. [Interfaz de Usuario](#-interfaz-de-usuario)
-8. [Guía Rápida](#-guía-rápida-de-desarrollo)
-9. [Testing](#-testing)
-10. [Troubleshooting](#-troubleshooting)
+7. [Dashboard de KPIs](#-dashboard-de-kpis)
+8. [Interfaz de Usuario](#-interfaz-de-usuario)
+9. [Guía Rápida](#-guía-rápida-de-desarrollo)
+10. [Testing](#-testing)
+11. [Troubleshooting](#-troubleshooting)
 
 ---
 
@@ -55,15 +56,22 @@ Metric-Scrap-Project/
 │   │   ├── annual_processor.py
 │   │   └── custom_processor.py
 │   │
-│   ├── analysis/               # Análisis de contribuidores
+│   ├── analysis/               # Análisis de contribuidores y KPIs
 │   │   ├── weekly_contributors.py
 │   │   ├── monthly_contributors.py
 │   │   ├── quarterly_contributors.py
 │   │   ├── annual_contributors.py
-│   │   └── custom_contributors.py
+│   │   ├── custom_contributors.py
+│   │   ├── kpi_calculator.py          # ✨ KPIs dashboard (base)
+│   │   └── period_kpi_calculator.py   # ✨ KPIs por periodo (dinámico)
 │   │
 │   ├── utils/                  # Utilidades
-│   │   └── logging_config.py
+│   │   ├── logging_config.py   # Sistema de logs
+│   │   ├── cache_manager.py    # Caché de datos
+│   │   ├── data_validator.py   # Validación de datos
+│   │   ├── exceptions.py       # Excepciones personalizadas
+│   │   ├── backup_manager.py   # Sistema de backups
+│   │   └── report_history.py   # Historial de reportes
 │   │
 │   └── pdf_custom_generator.py # Generador custom (legacy)
 │
@@ -71,13 +79,23 @@ Metric-Scrap-Project/
 │   ├── app.py                  # Ventana principal
 │   ├── theme_manager.py        # Temas claro/oscuro
 │   ├── report_thread.py        # Threads para PDFs
-│   └── tabs/                   # Pestañas
-│       ├── base_tab.py         # Clase base para tabs
-│       ├── weekly_tab.py
-│       ├── monthly_tab.py
-│       ├── quarterly_tab.py
-│       ├── annual_tab.py
-│       └── custom_tab.py
+│   ├── tabs/                   # Pestañas
+│   │   ├── base_tab.py         # Clase base para tabs
+│   │   ├── weekly_tab.py
+│   │   ├── monthly_tab.py
+│   │   ├── quarterly_tab.py
+│   │   ├── annual_tab.py
+│   │   ├── custom_tab.py
+│   │   └── dashboard_tab.py    # ✨ Dashboard de KPIs dinámico
+│   ├── widgets/                # ✨ Widgets personalizados
+│   │   └── kpi_card.py         # Tarjetas de KPIs, gráficos
+│   └── dialogs/                # Diálogos
+│       ├── dashboard_dialog.py # ✨ Modal de dashboard
+│       ├── validation_report.py # Reporte de validación
+│       ├── log_viewer.py       # Visor de logs
+│       ├── error_dialog.py     # Diálogo de errores
+│       ├── history_dialog.py   # Historial de reportes
+│       └── backup_manager_dialog.py # Gestor de backups
 │
 ├── data/                        # Datos de entrada
 │   └── test pandas.xlsx        # Excel source
@@ -495,6 +513,283 @@ def apply_contributors_cumulative_coloring(table_style, data, cumulative_col_idx
                                colors.HexColor('#FFCCCC'))
         except (ValueError, IndexError):
             continue
+```
+
+---
+
+## 📊 Dashboard de KPIs
+
+### Arquitectura del Dashboard
+
+El sistema de dashboard implementa KPIs dinámicos con filtrado por periodo y visualizaciones interactivas.
+
+### Componentes Principales
+
+**1. src/analysis/kpi_calculator.py** - Cálculos base semanales:
+```python
+@dataclass
+class DashboardKPIs:
+    """Estructura de datos del dashboard"""
+    current_rate: float
+    total_scrap: float
+    total_hours: float
+    target_rate: float
+    variance: float
+    week: int
+    year: int
+    rate_change_pct: float
+    scrap_change_abs: float
+    hours_change_pct: float
+    trend_direction: str
+    historical_trend: List[WeeklyKPI]
+    top_contributors: List[Dict]
+    alerts: List[Dict]
+
+def calculate_dashboard_kpis(scrap_df, ventas_df, horas_df) -> DashboardKPIs:
+    """Calcula KPIs de la última semana con datos"""
+    # Implementación...
+```
+
+**2. src/analysis/period_kpi_calculator.py** - Sistema dinámico por periodo:
+```python
+def calculate_period_kpis(scrap_df, ventas_df, horas_df, period_config):
+    """
+    Calcula KPIs para cualquier tipo de periodo
+    
+    Args:
+        period_config: Dict con configuración
+            {
+                "type": "last_week" | "specific_week" | "month" | "quarter" | "year" | "custom",
+                "week": int (si type == "specific_week"),
+                "year": int,
+                "month": int (si type == "month"),
+                "quarter": int (si type == "quarter"),
+                "start_date": datetime (si type == "custom"),
+                "end_date": datetime (si type == "custom")
+            }
+    
+    Returns:
+        DashboardKPIs con datos del periodo seleccionado
+    """
+    period_type = period_config.get("type", "last_week")
+    
+    if period_type == "last_week":
+        return _calculate_week_kpis(scrap_df, ventas_df, horas_df, None, None)
+    elif period_type == "specific_week":
+        return _calculate_week_kpis(scrap_df, ventas_df, horas_df, 
+                                    period_config["week"], period_config["year"])
+    elif period_type == "month":
+        return _calculate_month_kpis(scrap_df, ventas_df, horas_df,
+                                     period_config["month"], period_config["year"])
+    # ... más tipos
+
+def get_top_items_for_period(scrap_df, period_config, top_n=10):
+    """Obtiene top N items por scrap para un periodo específico"""
+    filtered = _filter_by_period(scrap_df, period_config, 'Posting Date')
+    grouped = filtered.groupby('Item').agg({
+        'Description': 'first',
+        'Total Posted': 'sum'
+    }).reset_index()
+    return grouped.nlargest(top_n, 'Total Posted').to_dict('records')
+
+def _filter_by_period(df, period_config, date_column='Posting Date'):
+    """Función universal de filtrado por periodo"""
+    # Implementación para todos los tipos...
+```
+
+**3. ui/tabs/dashboard_tab.py** - Interfaz interactiva:
+```python
+class DashboardTab(QWidget):
+    """Tab principal de dashboard con filtros dinámicos"""
+    
+    refresh_requested = Signal()
+    
+    def __init__(self):
+        super().__init__()
+        self.current_period_type = "last_week"
+        self.current_period_data = {"type": "last_week"}
+        self._init_ui()
+    
+    def _create_filter_panel(self):
+        """Crea panel de filtros dinámicos"""
+        # ComboBox con 6 tipos de periodo
+        period_types = [
+            "Última Semana",
+            "Semana Específica", 
+            "Mes",
+            "Trimestre",
+            "Año",
+            "Rango Personalizado"
+        ]
+        self.period_type_combo.addItems(period_types)
+        self.period_type_combo.currentIndexChanged.connect(self._on_period_type_changed)
+    
+    def _on_period_type_changed(self, index):
+        """Muestra controles apropiados según tipo seleccionado"""
+        # Limpia layout
+        self._clear_selector_layout()
+        
+        if index == 1:  # Semana Específica
+            # Agregar spinboxes de semana y año
+            pass
+        elif index == 2:  # Mes
+            # Agregar combobox de mes + spinbox año
+            pass
+        # ... más casos
+    
+    def _update_items_chart(self, kpis):
+        """Actualiza gráfico de barras de items"""
+        from src.analysis.period_kpi_calculator import get_top_items_for_period
+        
+        top_items = get_top_items_for_period(scrap_df, self.current_period_data, top_n=10)
+        
+        # Crear QHorizontalBarSeries
+        series = QHorizontalBarSeries()
+        bar_set = QBarSet("Scrap Amount")
+        bar_set.setColor("#1976d2")  # Azul
+        
+        for item in reversed(top_items):
+            bar_set.append(item['amount'])
+        
+        series.append(bar_set)
+        self.items_chart.addSeries(series)
+        
+        # Configurar ejes
+        axis_y = QBarCategoryAxis()  # Códigos de items
+        axis_x = QValueAxis()        # Montos USD
+        # ...
+```
+
+**4. ui/widgets/kpi_card.py** - Componentes visuales:
+```python
+class KPICard(QFrame):
+    """Tarjeta grande para KPIs principales"""
+    
+    def set_value(self, value, unit="", is_positive=True):
+        """Actualiza valor con color dinámico"""
+        color = "#4caf50" if is_positive else "#f44336"
+        self.value_label.setStyleSheet(f"color: {color}; font-size: 36px;")
+        self.value_label.setText(f"{value}{unit}")
+    
+    def set_comparison(self, change_text, is_positive):
+        """Muestra comparación con flecha"""
+        arrow = "↑" if is_positive else "↓"
+        self.comparison_label.setText(f"{arrow} {change_text}")
+
+class TrendChart(QChartView):
+    """Gráfico de línea para tendencia histórica"""
+    
+    def update_data(self, historical_trend, target_rate):
+        """Actualiza series con datos nuevos"""
+        # QLineSeries para scrap rate
+        # QLineSeries punteada para target
+        # ...
+```
+
+### Panel de Filtros Dinámico
+
+**Tipos de Periodo Soportados:**
+
+| Tipo | Controles | Comparación vs |
+|------|-----------|----------------|
+| Última Semana | Ninguno (auto-detecta) | Semana anterior |
+| Semana Específica | SpinBox semana (1-52) + año | Semana anterior |
+| Mes | ComboBox mes + SpinBox año | Mes anterior |
+| Trimestre | ComboBox Q1-Q4 + SpinBox año | Trimestre anterior |
+| Año | SpinBox año | Año anterior |
+| Rango Personalizado | QDateEdit inicio + fin | Periodo equivalente anterior |
+
+**Flujo de Datos:**
+1. Usuario selecciona tipo en ComboBox
+2. `_on_period_type_changed()` muestra controles apropiados
+3. Usuario configura parámetros y presiona "Aplicar Filtro"
+4. `_on_apply_filter()` construye `period_config` Dict
+5. Se emite señal `refresh_requested`
+6. `DashboardLoadThread` carga datos con `calculate_period_kpis()`
+7. Dashboard se actualiza con nuevos KPIs y gráficos
+
+### Gráficos de Análisis
+
+**Top 10 Items por Scrap:**
+- Tipo: QHorizontalBarSeries (barras horizontales)
+- Color: Azul (#1976d2)
+- Eje Y: Códigos de items (QBarCategoryAxis)
+- Eje X: Montos USD (QValueAxis con formato "$%.0f")
+- Datos: Top 10 items con mayor Total Posted en periodo
+
+**Top 10 Celdas por Scrap:**
+- Tipo: QHorizontalBarSeries
+- Color: Naranja (#ff9800)
+- Eje Y: Nombres de ubicaciones (QBarCategoryAxis)
+- Eje X: Montos USD (QValueAxis)
+- Datos: Top 10 ubicaciones con mayor scrap en periodo
+
+**Actualización Dinámica:**
+- Ambos gráficos se actualizan automáticamente al cambiar periodo
+- Usan `get_top_items_for_period()` y `get_top_locations_for_period()`
+- Filtrado universal con `_filter_by_period()`
+
+### Sistema de Alertas
+
+```python
+def generate_alerts(kpis: DashboardKPIs, historical_trend: List[WeeklyKPI]) -> List[Dict]:
+    """Genera alertas automáticas según condiciones"""
+    alerts = []
+    
+    # Critical: Excede target >10%
+    if kpis.variance > 0.10:
+        alerts.append({
+            "severity": "critical",
+            "title": "Excede Meta Significativamente",
+            "message": f"Scrap rate {kpis.variance:.1%} por encima del target"
+        })
+    
+    # Warning: Tendencia creciente 3+ semanas
+    if len(historical_trend) >= 3:
+        if all(historical_trend[i].rate > historical_trend[i+1].rate 
+               for i in range(len(historical_trend)-1)):
+            alerts.append({
+                "severity": "warning",
+                "title": "Tendencia Creciente",
+                "message": "Scrap rate ha aumentado 3+ semanas consecutivas"
+            })
+    
+    # ... más condiciones
+    return alerts
+```
+
+### Uso del Dashboard
+
+**Desde la UI:**
+```python
+# ui/app.py
+
+def show_dashboard(self):
+    """Abre modal de dashboard"""
+    from ui.dialogs import DashboardDialog
+    dialog = DashboardDialog(self)
+    dialog.exec()
+```
+
+**Desde código:**
+```python
+from src.analysis.period_kpi_calculator import calculate_period_kpis
+from src.processors.data_loader import load_data
+
+scrap_df, ventas_df, horas_df, _ = load_data()
+
+# KPIs del último mes
+period_config = {
+    "type": "month",
+    "month": 11,  # Noviembre
+    "year": 2025
+}
+
+kpis = calculate_period_kpis(scrap_df, ventas_df, horas_df, period_config)
+
+print(f"Scrap Rate: {kpis.current_rate:.2%}")
+print(f"vs Mes Anterior: {kpis.rate_change_pct:+.1%}")
+print(f"Top Contributor: {kpis.top_contributors[0]}")
 ```
 
 ---
