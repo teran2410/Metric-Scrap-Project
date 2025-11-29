@@ -549,6 +549,16 @@ class ScrapRateApp(QMainWindow):
         """Configura la barra de menú"""
         menubar = self.menuBar()
         
+        # Menú Ver
+        view_menu = menubar.addMenu("Ver")
+        
+        # Acción Dashboard
+        self.dashboard_action = view_menu.addAction("📊 Dashboard")
+        self.dashboard_action.triggered.connect(self.show_dashboard)
+        self.dashboard_action.setStatusTip("Abre el dashboard con KPIs en tiempo real")
+        
+        view_menu.addSeparator()
+        
         # Menú Datos
         data_menu = menubar.addMenu("Datos")
         
@@ -700,6 +710,20 @@ class ScrapRateApp(QMainWindow):
                 self,
                 "Error",
                 f"No se pudo abrir el historial de reportes:\n\n{str(e)}"
+            )
+    
+    def show_dashboard(self):
+        """Abre el dashboard de KPIs"""
+        try:
+            from ui.dialogs import DashboardDialog
+            dialog = DashboardDialog(self)
+            dialog.exec()
+            
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"No se pudo abrir el dashboard:\n\n{str(e)}"
             )
 
 

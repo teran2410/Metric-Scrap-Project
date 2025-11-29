@@ -2,9 +2,9 @@
 
 ## Estado General
 - **Total de Mejoras:** 13
-- **Completadas:** 7 ✅
+- **Completadas:** 8 ✅
 - **En Progreso:** 0
-- **Pendientes:** 4
+- **Pendientes:** 3
 - **Descartadas/Futuro:** 2 🔮
 
 ---
@@ -289,36 +289,123 @@
 
 ### ✅ Mejora #6: Dashboard de KPIs 📊
 **Prioridad:** 🟡 MEDIA  
-**Estado:** ⏳ Pendiente  
-**Estimación:** 3-4 horas
+**Estado:** ✅ **COMPLETADA** (28/11/2025)  
+**Tiempo real:** 3.5 horas  
+**Estimación original:** 3-4 horas
 
 **Problema:**
 - No hay visibilidad rápida del estado actual sin generar PDF
 - Usuario debe generar reporte completo para ver métricas básicas
 - Falta vista de resumen ejecutivo
 
-**Solución:**
-- Ventana/Tab de Dashboard con métricas actuales:
-  - Scrap rate de la semana actual vs target
-  - Top 3 contribuidores
-  - Tendencia últimas 4 semanas (gráfico)
-  - Alertas si excede umbrales
-  - Resumen de mes actual vs mes anterior
-- Actualización automática al abrir la app
-- Botón de refresh manual
+**Solución Implementada:**
+- ✅ Dashboard completo con KPIs en tiempo real
+- ✅ Vista modal accesible desde menú "Ver → 📊 Dashboard"
+- ✅ KPIs principales: Scrap Rate actual, Total Scrap, Horas Producción
+- ✅ Métricas secundarias: Target, Varianza, Semana Fiscal
+- ✅ Gráfico de tendencia últimas 4 semanas
+- ✅ Top 3 contributors con montos y porcentajes
+- ✅ Sistema de alertas con severidad (critical, warning, info, success)
+- ✅ Botón de refresh manual para actualizar datos
+- ✅ Timestamp de última actualización
+- ✅ Carga de datos en background (no bloquea UI)
 
-**Beneficios:**
-- Visibilidad inmediata sin generar PDF
-- Toma de decisiones más rápida
-- Alertas proactivas
+**Implementación:**
 
-**Archivos a crear:**
-- `ui/tabs/dashboard_tab.py` - Nueva pestaña de dashboard
-- `src/analysis/kpi_calculator.py` - Cálculo de KPIs
-- `ui/widgets/kpi_card.py` - Widgets de tarjetas KPI
+1. **src/analysis/kpi_calculator.py** (420 líneas):
+   - Dataclasses:
+     - `WeeklyKPI`: Estructura para KPIs de una semana
+     - `DashboardKPIs`: Estructura completa con todos los datos del dashboard
+   - Funciones principales:
+     - `get_current_week_info()`: Obtiene semana y año actual
+     - `calculate_weekly_kpi()`: Calcula KPIs de una semana específica
+     - `get_top_contributors_summary()`: Top N contributors con montos
+     - `get_historical_trend()`: Últimas N semanas de datos
+     - `generate_alerts()`: Genera alertas automáticas basadas en:
+       - Excede target (critical/warning)
+       - Tendencia creciente (3+ semanas)
+       - Aumento súbito (>25% vs semana anterior)
+       - Mejora sostenida (cumple target 3+ semanas)
+     - `calculate_dashboard_kpis()`: Función principal que orquesta todo
 
-**Archivos a modificar:**
-- `ui/app.py` - Agregar tab de dashboard
+2. **ui/widgets/kpi_card.py** (360 líneas):
+   - `KPICard`: Tarjeta grande para KPIs principales
+     - Valor principal con color dinámico
+     - Texto de comparación con flecha indicadora
+     - Efecto hover con cambio de borde
+   - `MetricCard`: Tarjeta compacta para métricas secundarias
+   - `AlertCard`: Tarjeta de alerta con severidad visual
+     - Colores por severidad (rojo, amarillo, azul, verde)
+     - Icono emoji según tipo
+     - Borde lateral destacado
+   - `TrendChart`: Gráfico de línea con Qt Charts
+     - Serie de scrap rate con línea sólida azul
+     - Serie de target con línea punteada roja
+     - Ejes dinámicos según rango de datos
+     - Animaciones suaves
+
+3. **ui/tabs/dashboard_tab.py** (480 líneas):
+   - Layout completo con scroll area
+   - Header con título y botón refresh
+   - Sección KPIs: 3 tarjetas grandes + 3 métricas secundarias
+   - Sección Gráfico: TrendChart con altura mínima 300px
+   - Sección Bottom: Top Contributors y Alertas lado a lado
+   - Método `update_dashboard()`: Actualiza todos los componentes
+   - Métodos helper:
+     - `_update_main_kpis()`: Actualiza tarjetas principales
+     - `_update_trend_chart()`: Actualiza gráfico
+     - `_update_contributors()`: Actualiza lista de contributors
+     - `_update_alerts()`: Limpia y agrega nuevas alertas
+   - Estados: `show_loading()`, `show_error()`
+
+4. **ui/dialogs/dashboard_dialog.py** (120 líneas):
+   - `DashboardLoadThread`: Thread para cargar datos sin bloquear UI
+   - `DashboardDialog`: Diálogo modal 1200x800px
+   - Carga automática al abrir
+   - Botón refresh conectado a recarga
+   - Manejo de errores con mensajes
+
+5. **Integración en ui/app.py**:
+   - Nuevo menú "Ver" con acción "📊 Dashboard"
+   - Función `show_dashboard()` que abre el diálogo
+   - Import de DashboardDialog en dialogs/__init__.py
+
+**Beneficios Obtenidos:**
+- ✅ Visibilidad inmediata sin generar PDF
+- ✅ Toma de decisiones más rápida con datos en tiempo real
+- ✅ Alertas proactivas detectan problemas automáticamente
+- ✅ Interfaz profesional con gráficos y tarjetas visuales
+- ✅ No bloquea la UI durante carga de datos
+- ✅ Contexto histórico con tendencia de 4 semanas
+- ✅ Identificación rápida de top contributors
+- ✅ Semáforo visual (verde/rojo) según cumplimiento de target
+
+**Archivos Creados:**
+- `src/analysis/kpi_calculator.py` (420 líneas)
+- `ui/widgets/__init__.py` (6 líneas)
+- `ui/widgets/kpi_card.py` (360 líneas)
+- `ui/tabs/dashboard_tab.py` (480 líneas)
+- `ui/dialogs/dashboard_dialog.py` (120 líneas)
+
+**Archivos Modificados:**
+- `ui/dialogs/__init__.py` - Exporta DashboardDialog
+- `ui/app.py` - Menú Ver y función show_dashboard()
+
+**Características Técnicas:**
+- Compatible con PySide6
+- Responsive layout con scroll
+- Colores corporativos (azul #1976d2 para primary)
+- Gráficos con Qt Charts (anti-aliasing, animaciones)
+- Código modular y reutilizable
+- Logging detallado en todas las funciones
+- Manejo robusto de errores
+
+**Próximas mejoras opcionales:**
+- [ ] Auto-refresh cada N minutos
+- [ ] Exportar dashboard como imagen PNG
+- [ ] Comparación con múltiples periodos anteriores
+- [ ] Filtros por celda/ubicación
+- [ ] Configuración de alertas personalizadas
 
 ---
 
@@ -706,9 +793,9 @@
 5. ✅ Comparación de Periodos (#4)
 6. ✅ Backup Automático (#20)
 
-### 🟡 MEDIA (4)
-7. Dashboard de KPIs (#6) - ⏳ Pendiente
-8. ✅ Historial de Reportes (#7)
+### 🟡 MEDIA (2)
+7. ✅ Historial de Reportes (#7)
+8. ✅ Dashboard de KPIs (#6)
 9. Sistema de Templates (#8) - ⏳ Pendiente
 
 ### 🟢 BAJA-MEDIA (3)
@@ -720,7 +807,7 @@
 13. 🔮 Análisis de Tendencias (#16) - Requiere datos de forecast/planeación
 14. 🔮 Predicción Simple (#17) - Requiere datos de forecast/planeación
 
-**Resumen:** 7 de 13 mejoras completadas (54%), 2 pospuestas para futuro
+**Resumen:** 8 de 13 mejoras completadas (62%), 2 pospuestas para futuro
 
 ---
 

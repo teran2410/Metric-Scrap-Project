@@ -7,6 +7,7 @@ from .log_viewer import LogViewerDialog, show_log_viewer
 from .validation_report import ValidationReportDialog, show_validation_report
 from .backup_manager_dialog import BackupManagerDialog, show_backup_manager
 from .history_dialog import ReportHistoryDialog
+from .dashboard_dialog import DashboardDialog
 
 __all__ = [
     'ErrorDialog', 
@@ -17,5 +18,6 @@ __all__ = [
     'show_validation_report',
     'BackupManagerDialog',
     'show_backup_manager',
-    'ReportHistoryDialog'
+    'ReportHistoryDialog',
+    'DashboardDialog'
 ]
