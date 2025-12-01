@@ -194,7 +194,28 @@ class BackupManagerDialog(QDialog):
         
         if reply == QMessageBox.Yes:
             try:
-                backup_path = self.backup_manager.create_backup(self.data_file_path, force=True)
+                # Usar manual=True para indicar que es un backup manual
+                result = self.backup_manager.create_backup(self.data_file_path, force=True, manual=True)
+                
+                # Si se alcanzó el límite
+                if isinstance(result, tuple) and result[1] == "limit_reached":
+                    limit_reply = QMessageBox.warning(
+                        self,
+                        "⚠️ Límite de Backups Alcanzado",
+                        f"Ya existen {self.backup_manager.max_backups} backups (máximo permitido).\n\n"
+                        f"Si continúa, se eliminará el backup más antiguo.\n\n"
+                        f"¿Desea proceder?",
+                        QMessageBox.Yes | QMessageBox.No,
+                        QMessageBox.No
+                    )
+                    
+                    # Si confirma, crear sin manual=True para que aplique la limpieza automática
+                    if limit_reply == QMessageBox.Yes:
+                        backup_path = self.backup_manager.create_backup(self.data_file_path, force=True, manual=False)
+                    else:
+                        return  # Usuario canceló
+                else:
+                    backup_path = result
                 
                 if backup_path:
                     QMessageBox.information(

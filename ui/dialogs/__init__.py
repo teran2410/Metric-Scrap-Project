@@ -8,6 +8,7 @@ from .validation_report import ValidationReportDialog, show_validation_report
 from .backup_manager_dialog import BackupManagerDialog, show_backup_manager
 from .history_dialog import ReportHistoryDialog
 from .dashboard_dialog import DashboardDialog
+from .launcher_dialog import LauncherDialog
 
 __all__ = [
     'ErrorDialog', 
@@ -19,5 +20,6 @@ __all__ = [
     'BackupManagerDialog',
     'show_backup_manager',
     'ReportHistoryDialog',
-    'DashboardDialog'
+    'DashboardDialog',
+    'LauncherDialog'
 ]

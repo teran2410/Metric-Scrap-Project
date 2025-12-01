@@ -11,7 +11,7 @@ from PySide6.QtCore import Qt, Signal, QTimer, QDate, QThread
 from PySide6.QtGui import QFont, QColor
 from PySide6.QtCharts import (QChart, QChartView, QBarSeries, QBarSet, 
                              QBarCategoryAxis, QValueAxis, QHorizontalBarSeries,
-                             QLineSeries, QScatterSeries)
+                             QLineSeries, QScatterSeries, QAbstractBarSeries)
 import logging
 from datetime import datetime
 
@@ -1432,11 +1432,17 @@ class DashboardTab(QWidget):
             categories = []
             for item in reversed(top_items):  # Revertir para mostrar mayor arriba
                 bar_set.append(item['amount'])
-                # Usar solo el código del item para el label
+                # Solo el código del item en el eje
                 categories.append(item['item'][:15])
             
             series = QHorizontalBarSeries()
             series.append(bar_set)
+            
+            # Habilitar etiquetas en las barras
+            bar_set.setLabelColor("#000000")
+            series.setLabelsVisible(True)
+            series.setLabelsPosition(QAbstractBarSeries.LabelsOutsideEnd)
+            series.setLabelsFormat("$@value")
             
             self.items_chart.addSeries(series)
             
@@ -1455,6 +1461,9 @@ class DashboardTab(QWidget):
             axis_x.setRange(0, max_value * 1.1)
             self.items_chart.addAxis(axis_x, Qt.AlignBottom)
             series.attachAxis(axis_x)
+            
+            # Estilo
+            self.items_chart.setBackgroundBrush(Qt.white)
             
             # Estilo
             self.items_chart.setBackgroundBrush(Qt.white)
@@ -1493,10 +1502,17 @@ class DashboardTab(QWidget):
             categories = []
             for location in reversed(top_locations):  # Revertir para mostrar mayor arriba
                 bar_set.append(location['amount'])
+                # Solo el nombre de la celda en el eje
                 categories.append(location['location'][:20])
             
             series = QHorizontalBarSeries()
             series.append(bar_set)
+            
+            # Habilitar etiquetas en las barras
+            bar_set.setLabelColor("#000000")
+            series.setLabelsVisible(True)
+            series.setLabelsPosition(QAbstractBarSeries.LabelsOutsideEnd)
+            series.setLabelsFormat("$@value")
             
             self.locations_chart.addSeries(series)
             
@@ -1515,6 +1531,9 @@ class DashboardTab(QWidget):
             axis_x.setRange(0, max_value * 1.1)
             self.locations_chart.addAxis(axis_x, Qt.AlignBottom)
             series.attachAxis(axis_x)
+            
+            # Estilo
+            self.locations_chart.setBackgroundBrush(Qt.white)
             
             # Estilo
             self.locations_chart.setBackgroundBrush(Qt.white)

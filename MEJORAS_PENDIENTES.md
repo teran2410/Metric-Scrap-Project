@@ -1,10 +1,10 @@
 # 📋 Plan de Mejoras - Metric Scrap Project
 
 ## Estado General
-- **Total de Mejoras:** 13
+- **Total de Mejoras:** 15
 - **Completadas:** 8 ✅
 - **En Progreso:** 0
-- **Pendientes:** 3
+- **Pendientes:** 5
 - **Descartadas/Futuro:** 2 🔮
 
 ---
@@ -429,6 +429,47 @@
 - Splash Screen: Fondo azul corporativo (#2F6690), logo centrado, barra blanca
 - Welcome Screen: 2 cards lado a lado con hover effects, iconos grandes, texto descriptivo
 - Estilo consistente con theme_manager.py existente
+
+---
+
+### 🐛 Mejora #22: Bug - Gráficos Dashboard No Se Muestran en "Última Semana"
+**Prioridad:** 🔴 ALTA  
+**Estado:** ⏳ Pendiente  
+**Estimación:** 1 hora
+
+**Problema:**
+- Al iniciar la app y abrir el dashboard, se cargan los datos de la última semana correctamente
+- Sin embargo, las gráficas de "Top 10 Scrap por Item" y "Top 10 Scrap por Celda" no se logran ver
+- El problema persiste incluso cuando se recarga los datos manualmente
+- Las gráficas SÍ se muestran correctamente cuando se selecciona la opción "Semana Específica" y se coloca la última semana (ejemplo: semana 47)
+
+**Comportamiento Esperado:**
+- Las gráficas deben mostrarse correctamente tanto para "Última Semana" como para "Semana Específica"
+- No debe haber diferencia en el comportamiento entre estos dos modos de selección
+
+**Posible Causa:**
+- Diferencia en cómo se calcula o filtra el periodo entre "Última Semana" (auto-detectada) vs "Semana Específica" (manual)
+- Posible problema en la función `_filter_by_period()` o en `get_top_items_for_period()` / `get_top_locations_for_period()`
+- Puede ser un issue con el cálculo de la semana actual vs semana específica
+
+**Pasos para Reproducir:**
+1. Abrir la aplicación
+2. Ir al Dashboard
+3. Verificar que se muestre "Última Semana" por defecto
+4. Observar que las gráficas de Top 10 no aparecen
+5. Cambiar a "Semana Específica" y seleccionar la semana 47 (o la última disponible)
+6. Verificar que las gráficas ahora sí se muestran
+
+**Archivos a Revisar:**
+- `src/analysis/period_kpi_calculator.py` - Funciones de filtrado y cálculo de top items/locations
+- `ui/tabs/dashboard_tab.py` - Lógica de actualización de gráficos
+- `src/processors/data_loader.py` - Carga inicial de datos
+
+**Solución Propuesta:**
+- Debuggear la diferencia entre `_calculate_week_kpis()` para `None, None` (última semana) vs valores específicos
+- Verificar que `_filter_by_period()` funcione correctamente en ambos casos
+- Agregar logging detallado para identificar dónde falla el cálculo de top items/locations
+- Posiblemente unificar la lógica de detección de última semana con semana específica
 
 ---
 
@@ -1021,11 +1062,12 @@
 
 ## 📊 Resumen de Prioridades
 
-### 🔴 ALTA (4 - 3 completadas ✅, 1 pendiente)
+### 🔴 ALTA (5 - 3 completadas ✅, 2 pendientes)
 1. ✅ Sistema de Caché (#1)
 2. ✅ Logging y Diagnóstico (#10)
 3. ✅ Manejo de Errores Mejorado (#19)
 4. ⏳ Ventana de Bienvenida con Pre-carga (#21) - **SIGUIENTE**
+5. ⏳ Bug - Gráficos Dashboard No Se Muestran (#22)
 
 ### 🟠 MEDIA-ALTA (3 - Todas completadas ✅)
 4. ✅ Validación de Datos (#3)
@@ -1046,7 +1088,7 @@
 13. 🔮 Análisis de Tendencias (#16) - Requiere datos de forecast/planeación
 14. 🔮 Predicción Simple (#17) - Requiere datos de forecast/planeación
 
-**Resumen:** 8 de 14 mejoras completadas (57%), 2 pospuestas para futuro, 4 pendientes
+**Resumen:** 8 de 15 mejoras completadas (53%), 2 pospuestas para futuro, 5 pendientes
 
 ---
 
@@ -1060,6 +1102,6 @@
 
 ---
 
-**Última actualización:** 29 de noviembre de 2025  
+**Última actualización:** 1 de diciembre de 2025  
 **Responsable:** Oscar Teran  
 **Proyecto:** Metric Scrap Project - NavicoGroup

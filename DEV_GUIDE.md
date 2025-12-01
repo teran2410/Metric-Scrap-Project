@@ -1,6 +1,6 @@
 # 🚀 GUÍA DE DESARROLLO - Metric Scrap Project
 
-> **Última actualización:** 29 de Noviembre 2025  
+> **Última actualización:** 1 de diciembre de 2025  
 > **Arquitectura:** Post-FASE 2 (Modular + Herencia)  
 > **Python:** 3.12+ | **Framework GUI:** PySide6 6.10.1  
 > **Estado Actual:** Dashboard dinámico con KPIs por periodo + UX refinado
@@ -8,6 +8,31 @@
 ---
 
 ## 📝 Historial de Cambios Recientes
+
+### 1 de diciembre de 2025 - Optimización de Backups y UX Mejorada
+**Mejoras implementadas:**
+- ✅ **Launcher Dialog con Pre-carga de Datos**: Ventana inicial que carga datos en background antes de mostrar opciones de Dashboard o Generador de Reportes
+- ✅ **Labels en Gráficos de Barras**: Agregado valores monetarios al final de las barras en gráficos de dashboard (formato $)
+- ✅ **Título Dinámico en Gráfico de Tendencia**: Muestra rango de semanas en el título ("Últimas 4 Semanas: Semana 44 a la 47")
+- ✅ **Optimización del Sistema de Backups**: Reducido máximo de backups de 10 a 3, agregado diálogo de confirmación para backups manuales
+- ✅ **Revertido Análisis Pareto**: Removido intento fallido de coloración 80/20 que rompía los gráficos
+
+**Archivos creados/modificados:**
+- `ui/dialogs/launcher_dialog.py` (NUEVO - 320 líneas) - Ventana de selección con pre-carga
+- `ui/dialogs/__init__.py` - Exporta LauncherDialog
+- `ui/app.py` - Flujo inicial modificado para usar launcher
+- `ui/tabs/dashboard_tab.py` - Labels en gráficos de barras (QAbstractBarSeries.LabelsOutsideEnd)
+- `ui/widgets/kpi_card.py` - Título dinámico con rango de semanas
+- `src/utils/backup_manager.py` - Máximo reducido a 3, parámetro manual=True
+- `ui/dialogs/backup_manager_dialog.py` - Diálogo de confirmación para backups manuales
+
+**Próxima mejora planificada:**
+- 🚨 **Bug Crítico #22:** Las gráficas de Top 10 no se muestran en "Última Semana" (sí funcionan en "Semana Específica")
+  - Prioridad: ALTA
+  - Diagnóstico: Diferencia en cálculo de periodo entre auto-detectado vs manual
+  - Archivos a revisar: `period_kpi_calculator.py`, `dashboard_tab.py`
+
+---
 
 ### 29/11/2025 - Refinamiento de UX Dashboard
 **Mejoras implementadas:**

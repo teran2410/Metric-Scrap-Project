@@ -279,6 +279,17 @@ class TrendChart(QChartView):
             if not weeks_data:
                 return
             
+            # Obtener rango de semanas para el título
+            if len(weeks_data) >= 2:
+                first_week = weeks_data[0].week
+                last_week = weeks_data[-1].week
+                week_range_text = f"Últimas {len(weeks_data)} Semanas: Semana {first_week} a la {last_week}"
+            else:
+                week_range_text = f"Últimas {len(weeks_data)} Semanas"
+            
+            # Actualizar título con rango de semanas
+            self.chart.setTitle(f"Tendencia Scrap Rate ({week_range_text})")
+            
             # Serie de scrap rate
             series = QLineSeries()
             series.setName("Scrap Rate")

@@ -7,7 +7,7 @@ from datetime import datetime
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
     QWidget, QLabel, QPushButton, QComboBox, QLineEdit, QDateEdit,
-    QProgressBar, QMessageBox, QFrame, QMenuBar, QCheckBox
+    QProgressBar, QMessageBox, QFrame, QMenuBar, QCheckBox, QDialog
 )
 from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QIcon
@@ -728,14 +728,31 @@ class ScrapRateApp(QMainWindow):
 
 
 def run_app():
-    """Ejecuta la aplicación"""
+    """Ejecuta la aplicación con ventana de selección inicial"""
     app = QApplication(sys.argv)
     
     # Configurar estilo global de la aplicación
     app.setStyle("Fusion")
     
-    window = ScrapRateApp()
-    window.show()
+    # Mostrar ventana de selección inicial
+    from ui.dialogs import LauncherDialog
+    launcher = LauncherDialog()
     
-    sys.exit(app.exec())
+    if launcher.exec() == QDialog.Accepted:
+        selected = launcher.get_selected_option()
+        
+        if selected == "dashboard":
+            # Abrir directamente el dashboard
+            from ui.dialogs import DashboardDialog
+            dialog = DashboardDialog()
+            dialog.exec()
+            
+        elif selected == "reports":
+            # Abrir ventana principal de generación de reportes
+            window = ScrapRateApp()
+            window.show()
+            return app.exec()
+    
+    # Si se canceló o cerró la ventana, salir
+    return 0
 

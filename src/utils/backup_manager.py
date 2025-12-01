@@ -52,13 +52,13 @@ class BackupInfo:
 class BackupManager:
     """Gestor de backups automáticos para archivos de datos"""
     
-    def __init__(self, backup_folder: str = "backups", max_backups: int = 10):
+    def __init__(self, backup_folder: str = "backups", max_backups: int = 3):
         """
         Inicializa el gestor de backups.
         
         Args:
             backup_folder: Carpeta donde guardar los backups
-            max_backups: Número máximo de backups a mantener
+            max_backups: Número máximo de backups a mantener (default: 3)
         """
         self.backup_folder = Path(backup_folder)
         self.max_backups = max_backups
@@ -68,16 +68,18 @@ class BackupManager:
             self.backup_folder.mkdir(parents=True, exist_ok=True)
             logger.info(f"✓ Carpeta de backups creada: {self.backup_folder}")
     
-    def create_backup(self, source_file: str, force: bool = False) -> Optional[str]:
+    def create_backup(self, source_file: str, force: bool = False, manual: bool = False) -> Optional[str]:
         """
         Crea un backup del archivo fuente.
         
         Args:
             source_file: Ruta del archivo a respaldar
             force: Si True, crea backup aunque el archivo no haya cambiado
+            manual: Si True, indica que es un backup manual (requiere confirmación si hay límite)
             
         Returns:
             str: Ruta del backup creado, o None si no se creó
+            tuple: (None, "limit_reached") si se alcanzó el límite en backup manual
         """
         source_path = Path(source_file)
         
@@ -87,8 +89,15 @@ class BackupManager:
             return None
         
         try:
-            # Verificar si ya existe un backup reciente (últimos 5 minutos)
-            if not force:
+            # Para backups manuales, verificar límite ANTES de crear
+            if manual:
+                existing_backups = self.list_backups(source_path.name)
+                if len(existing_backups) >= self.max_backups:
+                    logger.warning(f"⚠️ Límite de backups alcanzado ({self.max_backups})")
+                    return (None, "limit_reached")
+            
+            # Verificar si ya existe un backup reciente (últimos 5 minutos) - solo para automáticos
+            if not force and not manual:
                 recent_backup = self._get_most_recent_backup(source_path.name)
                 if recent_backup:
                     time_diff = datetime.now() - recent_backup.timestamp
